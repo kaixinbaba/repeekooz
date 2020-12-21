@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate log;
 
+pub type ZKResult<T> = Result<T, String>;
 
 #[cfg(test)]
 mod tests {
