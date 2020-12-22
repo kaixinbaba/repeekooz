@@ -1,3 +1,5 @@
+pub mod protocol;
+
 #[macro_use]
 extern crate log;
 
