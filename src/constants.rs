@@ -46,6 +46,7 @@ pub enum AddWatchMode {
     PersistentRecursive = 1,
 }
 
+#[derive(Eq, PartialEq)]
 pub enum States {
     Connecting,
     Associating,
@@ -58,11 +59,11 @@ pub enum States {
 
 impl States {
     pub fn is_alive(&self) -> bool {
-        self != States::Closed && self != States::AuthFailed
+        self.ne(&States::Closed) && self.ne(&States::AuthFailed)
     }
 
     pub fn is_connected(&self) -> bool {
-        self == States::Connected || self == States::ConnectedReadOnly
+        self.eq(&States::Connected) || self.eq(&States::ConnectedReadOnly)
     }
 }
 
