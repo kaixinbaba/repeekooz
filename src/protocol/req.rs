@@ -76,6 +76,16 @@ impl Serializer for ACL {
     }
 }
 
+impl ACL {
+    pub fn world_acl() -> Vec<ACL> {
+        vec![ACL {
+            perms: Perms::All as i32,
+            scheme: WORLD.to_string(),
+            id: ANYONE.to_string(),
+        }]
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct CreateRequest {
     path: String,
@@ -97,7 +107,7 @@ impl CreateRequest {
         CreateRequest {
             path: String::from(path),
             data: None,
-            acl: Perms::world_acl(),
+            acl: ACL::world_acl(),
             flags: CreateMode::PERSISTENT as i32,
         }
     }
