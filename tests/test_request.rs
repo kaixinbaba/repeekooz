@@ -43,7 +43,7 @@ async fn create() {
     let path = "/xjj";
     let request = CreateRequest::new(path);
 
-    let header = RequestHeader::new(0, PERSISTENT as i32);
+    let header = RequestHeader::new(0, 1);
 
     let mut p = ReqPacket::packet(Some(header), request);
     w.write_buf(&mut p.bb.unwrap()).await;

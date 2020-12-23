@@ -2,6 +2,7 @@ use std::hash::Hasher;
 
 use bytes::{BufMut, BytesMut};
 
+use crate::constants::{ANYONE, WORLD, Perms};
 use crate::protocol::Serializer;
 
 #[derive(Debug, Default)]
@@ -62,9 +63,9 @@ impl Serializer for ConnectRequest {
 
 #[derive(Debug, Default)]
 pub struct ACL {
-    perms: i32,
-    scheme: String,
-    id: String,
+    pub perms: i32,
+    pub scheme: String,
+    pub id: String,
 }
 
 impl Serializer for ACL {
@@ -93,16 +94,10 @@ impl Serializer for CreateRequest {
 
 impl CreateRequest {
     pub fn new(path: &str) -> Self {
-        let mut acl = Vec::with_capacity(1);
-        acl.push(ACL {
-            perms: 31,
-            scheme: "world".to_string(),
-            id: "anyone".to_string(),
-        });
         CreateRequest {
             path: String::from(path),
             data: None,
-            acl,
+            acl: Perms::world_acl(),
             flags: CreateMode::PERSISTENT as i32,
         }
     }
@@ -125,7 +120,7 @@ impl<S: Serializer> ReqPacket<S> {
         ReqPacket {
             rh,
             req,
-            bb: None
+            bb: None,
         }
     }
 
