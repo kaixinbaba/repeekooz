@@ -6,7 +6,7 @@ use crate::protocol::resp::ReplyHeader;
 pub mod req;
 pub mod resp;
 
-pub trait Serializer {
+pub trait Serializer: Sized {
     fn write(&self, b: &mut BytesMut);
 
     fn write_bool(i: bool, b: &mut BytesMut) {

@@ -2,7 +2,7 @@ use std::hash::Hasher;
 
 use bytes::{BufMut, BytesMut};
 
-use crate::constants::{ANYONE, WORLD, Perms};
+use crate::constants::{ANYONE, CreateMode, Perms, WORLD};
 use crate::protocol::Serializer;
 
 #[derive(Debug, Default)]
@@ -108,51 +108,14 @@ impl CreateRequest {
             path: String::from(path),
             data: None,
             acl: ACL::world_acl(),
-            flags: CreateMode::PERSISTENT as i32,
+            flags: CreateMode::Persistent as i32,
         }
     }
 }
 
-pub enum CreateMode {
-    PERSISTENT = 0,
+
+pub struct ReqPacket {
+    rh: Option<RequestHeader>,
+    req: Box<dyn Serializer>,
 }
 
-
-#[derive(Debug, Default)]
-pub struct ReqPacket<S: Serializer> {
-    pub rh: Option<RequestHeader>,
-    pub req: S,
-    pub bb: Option<BytesMut>,
-}
-
-impl<S: Serializer> ReqPacket<S> {
-    pub fn new(rh: Option<RequestHeader>, req: S) -> Self {
-        ReqPacket {
-            rh,
-            req,
-            bb: None,
-        }
-    }
-
-    pub fn packet(rh: Option<RequestHeader>, req: S) -> Self {
-        let mut p = Self::new(rh, req);
-        let mut b = BytesMut::new();
-        p.write(&mut b);
-
-        let len = b.len();
-        let mut bb = BytesMut::with_capacity(4 + len);
-        bb.put_i32(len as i32);
-        bb.extend(b);
-        p.bb = Some(bb);
-        p
-    }
-}
-
-impl<S: Serializer> Serializer for ReqPacket<S> {
-    fn write(&self, b: &mut BytesMut) {
-        if let Some(rh) = &self.rh {
-            rh.write(b);
-        }
-        self.req.write(b);
-    }
-}

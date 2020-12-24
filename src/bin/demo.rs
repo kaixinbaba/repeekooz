@@ -1,6 +1,15 @@
 
 
+async fn foo() {
+    println!("{}", 5);
+}
 
 fn main() {
-    println!("{}", 1 << 2 | 1 << 3);
+    let a = async {
+        foo().await;
+    };
+    async {
+        a.await;
+    };
+    println!("Hello");
 }

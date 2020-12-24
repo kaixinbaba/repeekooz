@@ -12,6 +12,7 @@ use bytes::{Bytes, BytesMut, BufMut};
 use std::fs::read;
 use std::io::Cursor;
 use buruma::protocol::Serializer;
+use buruma::constants::Error;
 
 fn write_to_server<W>(s: W, mut b: BytesMut) -> BytesMut
     where W: Serializer {
@@ -24,7 +25,7 @@ async fn main() -> ZKResult<()> {
     let socket;
     match TcpStream::connect("127.0.0.1:2181").await {
         Ok(s) => socket = s,
-        Err(e) => return Err("connect error".to_string())
+        Err(e) => return Err(Error::BadArguments),
     }
     // let mut w = BufWriter::new(socket);
     let (mut r, mut w) = io::split(socket);

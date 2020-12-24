@@ -7,7 +7,7 @@ use tokio::prelude::{AsyncRead, AsyncWrite};
 
 pub async fn try_connect_server(host: &str) -> (ReadHalf<TcpStream>, WriteHalf<TcpStream>) {
     let socket;
-    match TcpStream::connect(host).await {
+    match TcpStream::connect(String::from(host)).await {
         Ok(s) => socket = s,
         Err(e) => panic!("Can't connect to {}", host),
     }

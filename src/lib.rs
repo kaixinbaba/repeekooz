@@ -1,5 +1,7 @@
 pub mod protocol;
 pub mod constants;
+pub mod api;
+mod client;
 
 #[macro_use]
 extern crate log;
@@ -7,7 +9,9 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
-pub type ZKResult<T> = Result<T, String>;
+use crate::constants::Error;
+
+pub type ZKResult<T> = Result<T, Error>;
 
 #[cfg(test)]
 mod tests {

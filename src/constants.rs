@@ -46,7 +46,7 @@ pub enum AddWatchMode {
     PersistentRecursive = 1,
 }
 
-#[derive(Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum States {
     Connecting,
     Associating,
@@ -115,6 +115,39 @@ pub enum CreateMode {
     Container = 4,
     PersistentWithTTL = 5,
     PersistentSequentialWithTTL = 6,
+}
+
+#[derive(Debug)]
+pub enum Error {
+    SystemError = -1,
+    RuntimeInconsistency = -2,
+    DataInconsistency = -3,
+    ConnectionLoss = -4,
+    MarshallingError = -5,
+    Unimplemented = -6,
+    OperationTimeout = -7,
+    BadArguments = -8,
+    NewConfigNoQuorum = -13,
+    ReConfigInProgress = -14,
+    UnknownSession = -12,
+    APIError = -100,
+    NoNode = -101,
+    NoAuth = -102,
+    BadVersion = -103,
+    NoChildrenForEphemerals = -108,
+    NodeExists = -110,
+    NotEmpty = -111,
+    SessionExpired = -112,
+    InvalidCallback = -113,
+    InvalidACL = -114,
+    AuthFailed = -115,
+    SessionMoved = -118,
+    NotReadonly = -119,
+    EphemeralOnLocalSession = -120,
+    NoWatcher = -121,
+    RequestTimeout = -122,
+    ReConfigDisabled = -123,
+    SessionClosedRequireSASLAuth = -124,
 }
 
 #[cfg(test)]
