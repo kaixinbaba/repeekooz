@@ -1,9 +1,10 @@
 use std::hash::Hasher;
 
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, BytesMut, Bytes};
 
 use crate::constants::{ANYONE, CreateMode, Perms, WORLD};
 use crate::protocol::Serializer;
+use crate::ZKResult;
 
 #[derive(Debug, Default)]
 pub struct RequestHeader {
@@ -21,9 +22,8 @@ impl RequestHeader {
 }
 
 impl Serializer for RequestHeader {
-    fn write(&self, b: &mut BytesMut) {
-        Self::write_i32(self.xid, b);
-        Self::write_i32(self.rtype, b)
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        unimplemented!()
     }
 }
 
@@ -38,11 +38,11 @@ pub struct ConnectRequest {
 }
 
 impl ConnectRequest {
-    pub fn new() -> Self {
+    pub fn new(session_timeout: i32) -> Self {
         ConnectRequest {
             protocol_version: 0,
             last_zxid_seen: 0,
-            time_out: 10000,
+            time_out: session_timeout,
             session_id: 0,
             passwd: None,
             read_only: false,
@@ -51,13 +51,14 @@ impl ConnectRequest {
 }
 
 impl Serializer for ConnectRequest {
-    fn write(&self, b: &mut BytesMut) {
-        Self::write_i32(self.protocol_version, b);
-        Self::write_i64(self.last_zxid_seen, b);
-        Self::write_i32(self.time_out, b);
-        Self::write_i64(self.session_id, b);
-        Self::write_slice_option(self.passwd.clone(), b);
-        Self::write_bool(self.read_only, b);
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        self.write_i32(self.protocol_version, b);
+        self.write_i64(self.last_zxid_seen, b);
+        self.write_i32(self.time_out, b);
+        self.write_i64(self.session_id, b);
+        self.write_slice_option(self.passwd.clone(), b);
+        self.write_bool(self.read_only, b);
+        Ok(())
     }
 }
 
@@ -69,10 +70,8 @@ pub struct ACL {
 }
 
 impl Serializer for ACL {
-    fn write(&self, b: &mut BytesMut) {
-        Self::write_i32(self.perms, b);
-        Self::write_string(self.scheme.as_str(), b);
-        Self::write_string(self.id.as_str(), b);
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        unimplemented!()
     }
 }
 
@@ -95,10 +94,8 @@ pub struct CreateRequest {
 }
 
 impl Serializer for CreateRequest {
-    fn write(&self, b: &mut BytesMut) {
-        Self::write_string(self.path.as_str(), b);
-        Self::write_slice_option(self.data.clone(), b);
-        Self::write_vec(&self.acl, b);
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        unimplemented!()
     }
 }
 
@@ -114,8 +111,17 @@ impl CreateRequest {
 }
 
 
+#[derive(Debug)]
 pub struct ReqPacket {
-    rh: Option<RequestHeader>,
-    req: Box<dyn Serializer>,
+    pub rh: Option<RequestHeader>,
+    pub req: BytesMut,
 }
 
+impl ReqPacket {
+    pub(crate) fn new(rh: Option<RequestHeader>, req: BytesMut) -> ReqPacket {
+        ReqPacket {
+            rh,
+            req: req,
+        }
+    }
+}

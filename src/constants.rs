@@ -119,6 +119,13 @@ pub enum CreateMode {
 
 #[derive(Debug)]
 pub enum Error {
+    // customer error
+    ReadSocketError = 100,
+    WriteSocketError = 101,
+    RequestSerializeError = 102,
+    ResponseDeserializeError = 103,
+
+
     SystemError = -1,
     RuntimeInconsistency = -2,
     DataInconsistency = -3,

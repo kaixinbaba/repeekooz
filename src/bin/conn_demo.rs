@@ -36,7 +36,7 @@ async fn main() -> ZKResult<()> {
     let handle = tokio::spawn(async move {
         loop {
             println!("writing!!!");
-            let mut request: ConnectRequest = ConnectRequest::new();
+            let mut request: ConnectRequest = ConnectRequest::new(10000);
             println!("{:#?}", request);
             sleep(Duration::from_secs(2));
 
@@ -45,17 +45,19 @@ async fn main() -> ZKResult<()> {
             bytes_mut = write_to_server(request, bytes_mut);
 
             let len = bytes_mut.len();
+            println!("{}", len);
             let mut bytes_mut2 = BytesMut::with_capacity(4 + len);
             bytes_mut2.put_i32(len as i32);
             bytes_mut2.extend(bytes_mut);
+            println!("{}", bytes_mut2.len());
 
-            w.write_buf(&mut bytes_mut2).await?;
+            w.write_buf(&mut bytes_mut2).await;
 
             w.flush().await;
 
 
             loop {
-                let buf_size = r.read_buf(&mut reader).await?;
+                let buf_size = r.read_buf(&mut reader).await.unwrap();
                 println!("{}", buf_size);
                 if buf_size != 0 {
                     let result = String::from_utf8(Vec::from(&reader[..])).unwrap();

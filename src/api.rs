@@ -35,9 +35,11 @@ mod tests {
 
     #[tokio::test]
     async fn new_zk() {
-        let zk = ZooKeeper::new("127.0.0.1:2181", 5000).await.unwrap();
-        println!("{:?}", zk);
-        zk.create("", None, vec![], CreateMode::Persistent).await;
-        thread::sleep(Duration::from_secs(5));
+        let zk = ZooKeeper::new("127.0.0.1:2181", 20000).await.unwrap();
+        info!("{:?}", zk);
+        thread::sleep(Duration::from_secs(10));
+        info!("after sleep");
+        // let result = zk.create("", None, vec![], CreateMode::Persistent).await;
+        // println!("{:?}", result);
     }
 }

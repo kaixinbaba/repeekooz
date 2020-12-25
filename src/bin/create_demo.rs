@@ -22,7 +22,7 @@ fn write_to_server<W>(s: W, mut b: BytesMut) -> BytesMut
 
 async fn send_conn(w: &mut WriteHalf<TcpStream>, r: &mut ReadHalf<TcpStream>) {
     let mut bytes_mut  = BytesMut::new();
-    let request = ConnectRequest::new();
+    let request = ConnectRequest::new(10000);
     bytes_mut = write_to_server(request, bytes_mut);
 
     let len = bytes_mut.len();

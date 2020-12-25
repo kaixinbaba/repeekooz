@@ -11,10 +11,8 @@ pub struct ReplyHeader {
 }
 
 impl Deserializer for ReplyHeader {
-    fn read(&mut self, b: &mut BytesMut) {
-        self.xid = Self::read_i32(b);
-        self.zxid = Self::read_i64(b);
-        self.err = Self::read_i32(b);
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        unimplemented!()
     }
 }
 
@@ -28,12 +26,8 @@ pub struct ConnectResponse {
 }
 
 impl Deserializer for ConnectResponse {
-    fn read(&mut self, b: &mut BytesMut) {
-        self.protocol_version = Self::read_i32(b);
-        self.time_out = Self::read_i32(b);
-        self.session_id = Self::read_i64(b);
-        self.password = Self::read_slice_unchecked(b);
-        self.read_only = Self::read_bool(b);
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        Ok(())
     }
 }
 
@@ -44,7 +38,7 @@ pub struct CreateResponse {
 
 impl Deserializer for CreateResponse {
 
-    fn read(&mut self, b: &mut BytesMut) {
-        self.path = Self::read_string(b);
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        unimplemented!()
     }
 }
