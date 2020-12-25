@@ -1,5 +1,3 @@
-use std::sync::mpsc::{Receiver, Sender};
-use std::sync::mpsc;
 use std::thread;
 
 use bytes::{Buf, BufMut, BytesMut};
@@ -13,36 +11,30 @@ use crate::protocol::{Deserializer, Serializer};
 use crate::protocol::req::{ConnectRequest, ReqPacket};
 use crate::protocol::resp::ConnectResponse;
 use crate::ZKResult;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Sender, Receiver};
 
 struct SenderTask {
     rx: Receiver<ReqPacket>,
     writer: WriteHalf<TcpStream>,
-    reader: ReadHalf<TcpStream>,
 }
 
 impl SenderTask {
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
         loop {
             info!("send loop");
-            let mut packet = match self.rx.recv() {
-                Ok(packet) => packet,
-                Err(e) => continue,
+            thread::sleep(Duration::from_secs(1));
+            let mut packet = match self.rx.recv().await {
+                Some(packet) => packet,
+                None => {
+                    error!("send run got None");
+                    continue;
+                },
             };
+            info!("{:?}", packet);
             self.writer.write_buf(&mut packet.req).await;
             self.writer.flush().await;
             info!("flush done loop");
-
-            let mut buf = BytesMut::with_capacity(2 * 1024);
-            let buf_size = match self.reader.read(&mut buf).await {
-                Ok(buf_size) if buf_size > 0 => buf_size,
-                Ok(zero) => continue,
-                 Err(e) => continue,
-            };
-            info!("buf_size : {}", buf_size);
-
-            let mut response = ConnectResponse::default();
-            response.read(&mut buf).unwrap();
-            info!("{:?}", response);
         }
         Ok(())
     }
@@ -54,14 +46,6 @@ struct EventTask {
 
 impl EventTask {
     pub(self) fn run(&self) {
-        // loop {
-        //     match self.rx.recv() {
-        //         Ok(s) => println!("receive"),
-        //         Err(e) => println!("error {:?}", e),
-        //     }
-        //     info!("in event loop");
-        //     thread::sleep(Duration::from_secs(1));
-        // }
         info!("in event loop");
     }
 }
@@ -70,9 +54,9 @@ impl EventTask {
 pub(crate) struct Client {
     server_list: Vec<String>,
     session_timeout: i32,
-    // reader: ReadHalf<TcpStream>,
+    reader: ReadHalf<TcpStream>,
     packet_tx: Sender<ReqPacket>,
-    event_tx: Sender<String>,
+    // event_tx: Sender<String>,
     state: States,
     session_id: i64,
 }
@@ -88,56 +72,30 @@ impl Client {
 
         let (mut reader, mut writer) = io::split(socket);
         // start send thread
-        let (packet_tx, packet_rx) : (Sender<ReqPacket>, Receiver<ReqPacket>) = mpsc::channel();
+        let (packet_tx, packet_rx): (Sender<ReqPacket>, Receiver<ReqPacket>) = mpsc::channel(1000);
 
-        // let mut sender_task = SenderTask {
-        //     rx: packet_rx,
-        //     writer,
-        //     reader,
-        // };
-        // tokio::spawn(async move {
-        //     sender_task.run().await
-        // });
-
+        let mut sender_task = SenderTask {
+            rx: packet_rx,
+            writer,
+        };
         tokio::spawn(async move {
-            loop {
-                info!("send loop");
-                let mut packet = match packet_rx.recv() {
-                    Ok(packet) => packet,
-                    Err(e) => continue,
-                };
-                writer.write_buf(&mut packet.req).await;
-                writer.flush().await;
-                info!("flush done loop");
-
-                let mut buf = BytesMut::with_capacity(2 * 1024);
-                let buf_size = match reader.read(&mut buf).await {
-                    Ok(buf_size) if buf_size > 0 => buf_size,
-                    Ok(zero) => continue,
-                    Err(e) => continue,
-                };
-                info!("buf_size : {}", buf_size);
-
-                let mut response = ConnectResponse::default();
-                response.read(&mut buf).unwrap();
-                info!("{:?}", response);
-            }
+            sender_task.run().await;
             Ok::<_, io::Error>(())
         });
 
         // start event thread
-        let (event_tx, event_rx) = mpsc::channel();
-        let event_task = EventTask {
-            rx: event_rx,
-        };
+        // let (event_tx, event_rx) = mpsc::channel();
+        // let event_task = EventTask {
+        //     rx: event_rx,
+        // };
         // thread::spawn(move || event_task.run());
 
         let mut client = Client {
             server_list,
             session_timeout,
-            // reader,
+            reader,
             packet_tx,
-            event_tx,
+            // event_tx,
             state: States::NotConnected,
             session_id: 0,
         };
@@ -162,22 +120,23 @@ impl Client {
         connect_request.write(&mut buf);
         let wrap_buf = Client::wrap_len_buf(buf);
         let packet = ReqPacket::new(None, wrap_buf);
-        info!("{:?}", packet);
-        self.packet_tx.send(packet);
-        // let mut buf = BytesMut::with_capacity(2 * 1024);
-        // let buf_size = match self.reader.read(&mut buf).await {
-        //     Ok(buf_size) if buf_size > 0 => buf_size,
-        //     _ => return Err(Error::ReadSocketError),
-        // };
-        // info!("buf_size : {}", buf_size);
-        //
-        // if buf_size == 0 {
-        //     error!("read connect response empty");
-        //     return Err(Error::ReadSocketError);
-        // }
-        // let mut response = ConnectResponse::default();
-        // response.read(&mut buf)?;
-        // info!("{:?}", response);
+        self.packet_tx.send(packet).await;
+        let mut buf = BytesMut::with_capacity(2 * 1024);
+        loop {
+            let buf_size = match self.reader.read(&mut buf).await {
+                Ok(buf_size) if buf_size >= 0 => buf_size,
+                _ => return Err(Error::ReadSocketError),
+            };
+            info!("buf_size : {}", buf_size);
+
+            if buf_size > 0 {
+                break;
+            }
+            thread::sleep(Duration::from_secs(1));
+        }
+        let mut response = ConnectResponse::default();
+        response.read(&mut buf)?;
+        info!("{:?}", response);
         Ok(())
     }
 

@@ -8,7 +8,7 @@ use crate::protocol::req::ACL;
 use crate::constants::CreateMode;
 
 #[derive(Debug)]
-struct ZooKeeper {
+pub struct ZooKeeper {
     client: Client,
 }
 
@@ -35,7 +35,13 @@ mod tests {
 
     #[tokio::test]
     async fn new_zk() {
-        let zk = ZooKeeper::new("127.0.0.1:2181", 20000).await.unwrap();
+        let zk = match ZooKeeper::new("127.0.0.1:2181", 20000).await {
+            Ok(zk) => zk,
+            Err(e) => {
+                error!("error in new zk {:?}", e);
+                return;
+            },
+        };
         info!("{:?}", zk);
         thread::sleep(Duration::from_secs(10));
         info!("after sleep");
