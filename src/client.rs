@@ -22,19 +22,14 @@ struct SenderTask {
 impl SenderTask {
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
         loop {
-            info!("send loop");
-            thread::sleep(Duration::from_secs(1));
             let mut packet = match self.rx.recv().await {
                 Some(packet) => packet,
                 None => {
-                    error!("send run got None");
                     continue;
                 }
             };
-            info!("{:?}", packet);
             self.writer.write_buf(&mut packet.req).await;
             self.writer.flush().await;
-            info!("flush done loop");
         }
         Ok(())
     }
