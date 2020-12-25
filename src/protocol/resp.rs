@@ -20,13 +20,18 @@ impl Deserializer for ReplyHeader {
 pub struct ConnectResponse {
     protocol_version: i32,
     time_out: i32,
-    session_id: i64,
-    password: Vec<u8>,
+    pub session_id: i64,
+    pub password: Vec<u8>,
     read_only: bool,
 }
 
 impl Deserializer for ConnectResponse {
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        self.protocol_version = self.read_i32(b);
+        self.time_out = self.read_i32(b);
+        self.session_id = self.read_i64(b);
+        self.password = self.read_slice_unchecked(b);
+        self.read_only = self.read_bool(b);
         Ok(())
     }
 }

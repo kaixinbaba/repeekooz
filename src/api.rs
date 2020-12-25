@@ -35,7 +35,7 @@ mod tests {
 
     #[tokio::test]
     async fn new_zk() {
-        let zk = match ZooKeeper::new("127.0.0.1:2181", 20000).await {
+        let zk = match ZooKeeper::new("127.0.0.1:2181", 5000).await {
             Ok(zk) => zk,
             Err(e) => {
                 error!("error in new zk {:?}", e);
@@ -43,9 +43,7 @@ mod tests {
             },
         };
         info!("{:?}", zk);
-        thread::sleep(Duration::from_secs(10));
+        thread::sleep(Duration::from_secs(3));
         info!("after sleep");
-        // let result = zk.create("", None, vec![], CreateMode::Persistent).await;
-        // println!("{:?}", result);
     }
 }

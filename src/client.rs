@@ -4,6 +4,8 @@ use bytes::{Buf, BufMut, BytesMut};
 use tokio::io::{self, ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio::prelude::*;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::Duration;
 
 use crate::constants::{Error, States};
@@ -11,8 +13,6 @@ use crate::protocol::{Deserializer, Serializer};
 use crate::protocol::req::{ConnectRequest, ReqPacket};
 use crate::protocol::resp::ConnectResponse;
 use crate::ZKResult;
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Sender, Receiver};
 
 struct SenderTask {
     rx: Receiver<ReqPacket>,
@@ -29,7 +29,7 @@ impl SenderTask {
                 None => {
                     error!("send run got None");
                     continue;
-                },
+                }
             };
             info!("{:?}", packet);
             self.writer.write_buf(&mut packet.req).await;
@@ -56,9 +56,10 @@ pub(crate) struct Client {
     session_timeout: i32,
     reader: ReadHalf<TcpStream>,
     packet_tx: Sender<ReqPacket>,
-    // event_tx: Sender<String>,
+    event_tx: Sender<String>,
     state: States,
     session_id: i64,
+    password: Option<Vec<u8>>,
 }
 
 impl Client {
@@ -72,7 +73,7 @@ impl Client {
 
         let (mut reader, mut writer) = io::split(socket);
         // start send thread
-        let (packet_tx, packet_rx): (Sender<ReqPacket>, Receiver<ReqPacket>) = mpsc::channel(1000);
+        let (packet_tx, packet_rx): (Sender<ReqPacket>, Receiver<ReqPacket>) = mpsc::channel(17120);
 
         let mut sender_task = SenderTask {
             rx: packet_rx,
@@ -84,20 +85,21 @@ impl Client {
         });
 
         // start event thread
-        // let (event_tx, event_rx) = mpsc::channel();
-        // let event_task = EventTask {
-        //     rx: event_rx,
-        // };
-        // thread::spawn(move || event_task.run());
+        let (event_tx, event_rx) = mpsc::channel(17120);
+        let event_task = EventTask {
+            rx: event_rx,
+        };
+        thread::spawn(move || event_task.run());
 
         let mut client = Client {
             server_list,
             session_timeout,
             reader,
             packet_tx,
-            // event_tx,
+            event_tx,
             state: States::NotConnected,
             session_id: 0,
+            password: None,
         };
         client.start_connect(session_timeout).await?;
         client.state = States::Connected;
@@ -121,32 +123,30 @@ impl Client {
         let wrap_buf = Client::wrap_len_buf(buf);
         let packet = ReqPacket::new(None, wrap_buf);
         self.packet_tx.send(packet).await;
-        let mut buf = BytesMut::with_capacity(2 * 1024);
+        let mut buf = BytesMut::with_capacity(1024);
         loop {
-            let buf_size = match self.reader.read(&mut buf).await {
-                Ok(buf_size) if buf_size >= 0 => buf_size,
+            let buf_size = match self.reader.read_buf(&mut buf).await {
+                Ok(buf_size) => buf_size,
                 _ => return Err(Error::ReadSocketError),
             };
-            info!("buf_size : {}", buf_size);
-
             if buf_size > 0 {
+                // skip first size
+                buf.get_i32();
                 break;
             }
-            thread::sleep(Duration::from_secs(1));
         }
         let mut response = ConnectResponse::default();
         response.read(&mut buf)?;
-        info!("{:?}", response);
+        self.session_id = response.session_id;
+        self.password = Some(response.password);
         Ok(())
     }
 
     fn wrap_len_buf(buf: BytesMut) -> BytesMut {
         let len = buf.len();
-        info!("{}", len);
         let mut wrap_buf = BytesMut::with_capacity(4 + len);
         wrap_buf.put_i32(len as i32);
         wrap_buf.extend(buf);
-        info!("{}", wrap_buf.len());
         wrap_buf
     }
 }
