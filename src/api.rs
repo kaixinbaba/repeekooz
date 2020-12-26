@@ -21,9 +21,15 @@ impl ZooKeeper {
         })
     }
 
+    pub async fn close(self) -> ZKResult<()> {
+        self.client.close().await?;
+        Ok(())
+    }
+
     pub async fn create(&self, path: &str, data: Option<&[u8]>, acl: Vec<ACL>, create_model: CreateMode) -> ZKResult<String> {
         Ok("/xjj".to_string())
     }
+
 }
 
 
@@ -35,15 +41,15 @@ mod tests {
 
     #[tokio::test]
     async fn new_zk() {
-        let zk = match ZooKeeper::new("127.0.0.1:2181", 5000).await {
+        let mut zk = match ZooKeeper::new("127.0.0.1:2181", 5000).await {
             Ok(zk) => zk,
             Err(e) => {
                 error!("error in new zk {:?}", e);
                 return;
             },
         };
-        info!("{:?}", zk);
+        zk.close().await;
         thread::sleep(Duration::from_secs(3));
-        info!("after sleep");
+        info!("{:?}", zk);
     }
 }

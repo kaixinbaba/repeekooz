@@ -110,9 +110,11 @@ impl CreateRequest {
     }
 }
 
+pub const DEATH_PTYPE: i8 = -1;
 
 #[derive(Debug)]
 pub struct ReqPacket {
+    pub ptype: i8,
     pub rh: Option<RequestHeader>,
     pub req: BytesMut,
 }
@@ -120,8 +122,17 @@ pub struct ReqPacket {
 impl ReqPacket {
     pub(crate) fn new(rh: Option<RequestHeader>, req: BytesMut) -> ReqPacket {
         ReqPacket {
+            ptype: 0,
             rh,
-            req: req,
+            req,
+        }
+    }
+
+    pub(crate) fn death_request() -> ReqPacket {
+        ReqPacket {
+            ptype: DEATH_PTYPE,
+            rh: None,
+            req: BytesMut::with_capacity(0),
         }
     }
 }

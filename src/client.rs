@@ -10,7 +10,7 @@ use tokio::time::Duration;
 
 use crate::constants::{Error, States};
 use crate::protocol::{Deserializer, Serializer};
-use crate::protocol::req::{ConnectRequest, ReqPacket};
+use crate::protocol::req::{ConnectRequest, ReqPacket, DEATH_PTYPE};
 use crate::protocol::resp::ConnectResponse;
 use crate::ZKResult;
 
@@ -23,15 +23,17 @@ impl SenderTask {
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
         loop {
             let mut packet = match self.rx.recv().await {
-                Some(packet) => packet,
-                None => {
-                    continue;
-                }
+                Some(packet) if packet.ptype != DEATH_PTYPE => packet,
+                Some(deatch) => {
+                    info!("Received DEATH REQ quit!");
+                    println!("Received DEATH REQ quit!");
+                    return Ok(());
+                },
+                None => continue,
             };
             self.writer.write_buf(&mut packet.req).await;
             self.writer.flush().await;
         }
-        Ok(())
     }
 }
 
@@ -58,7 +60,7 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    pub async fn new(connect_string: &str, session_timeout: i32) -> ZKResult<Client> {
+    pub(crate) async fn new(connect_string: &str, session_timeout: i32) -> ZKResult<Client> {
         let mut server_list = Vec::new();
         server_list.push(connect_string.to_string());
         let socket = match TcpStream::connect(server_list.get(0).unwrap().as_str()).await {
@@ -99,6 +101,11 @@ impl Client {
         client.start_connect(session_timeout).await?;
         client.state = States::Connected;
         Ok(client)
+    }
+
+    pub(crate) async fn close(mut self) -> ZKResult<()> {
+        self.state = States::Closed;
+        Ok(())
     }
 
     fn create_connect_request(&self, session_timeout: i32) -> ZKResult<ConnectRequest> {
