@@ -5,14 +5,17 @@ use crate::ZKResult;
 
 #[derive(Debug, Default)]
 pub struct ReplyHeader {
-    xid: i32,
-    zxid: i64,
-    err: i32,
+    pub xid: i32,
+    pub zxid: i64,
+    pub err: i32,
 }
 
 impl Deserializer for ReplyHeader {
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
-        unimplemented!()
+        self.xid = self.read_i32(b);
+        self.zxid = self.read_i64(b);
+        self.err = self.read_i32(b);
+        Ok(())
     }
 }
 
@@ -44,6 +47,7 @@ pub struct CreateResponse {
 impl Deserializer for CreateResponse {
 
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
-        unimplemented!()
+        self.path = self.read_string(b);
+        Ok(())
     }
 }

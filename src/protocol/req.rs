@@ -1,6 +1,6 @@
 use std::hash::Hasher;
 
-use bytes::{BufMut, BytesMut, Bytes};
+use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::constants::{ANYONE, CreateMode, Perms, WORLD};
 use crate::protocol::Serializer;
@@ -23,7 +23,9 @@ impl RequestHeader {
 
 impl Serializer for RequestHeader {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
-        unimplemented!()
+        self.write_i32(self.xid, b);
+        self.write_i32(self.rtype, b);
+        Ok(())
     }
 }
 
@@ -71,7 +73,10 @@ pub struct ACL {
 
 impl Serializer for ACL {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
-        unimplemented!()
+        self.write_i32(self.perms, b);
+        self.write_string(self.scheme.as_str(), b);
+        self.write_string(self.id.as_str(), b);
+        Ok(())
     }
 }
 
@@ -95,7 +100,10 @@ pub struct CreateRequest {
 
 impl Serializer for CreateRequest {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
-        unimplemented!()
+        self.write_string(self.path.as_str(), b);
+        self.write_slice_option(self.data.clone(), b);
+        self.write_vec(&self.acl, b);
+        Ok(())
     }
 }
 
@@ -106,6 +114,19 @@ impl CreateRequest {
             data: None,
             acl: ACL::world_acl(),
             flags: CreateMode::Persistent as i32,
+        }
+    }
+
+    pub fn new_full(path: &str, data: Option<&[u8]>, acl: Vec<ACL>, create_mode: CreateMode) -> Self {
+        let data = match data {
+            Some(d) => Some(Vec::from(d)),
+            _ => None,
+        };
+        CreateRequest {
+            path: String::from(path),
+            data,
+            acl,
+            flags: create_mode as i32,
         }
     }
 }

@@ -4,8 +4,11 @@ use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
 use tokio::time::Duration;
-use crate::protocol::req::ACL;
-use crate::constants::CreateMode;
+use crate::protocol::req::{ACL, CreateRequest, RequestHeader};
+use crate::constants::{CreateMode, Error, OpCode};
+use crate::protocol::resp::CreateResponse;
+use bytes::BytesMut;
+use crate::protocol::Serializer;
 
 #[derive(Debug)]
 pub struct ZooKeeper {
@@ -21,13 +24,22 @@ impl ZooKeeper {
         })
     }
 
-    pub async fn close(self) -> ZKResult<()> {
-        self.client.close().await?;
-        Ok(())
-    }
+    pub async fn create(&mut self, path: &str, data: Option<&[u8]>, acl: Vec<ACL>, create_model: CreateMode) -> ZKResult<String> {
 
-    pub async fn create(&self, path: &str, data: Option<&[u8]>, acl: Vec<ACL>, create_model: CreateMode) -> ZKResult<String> {
-        Ok("/xjj".to_string())
+        let rtype = match create_model {
+            CreateMode::Container => OpCode::CreateContainer,
+            _ => OpCode::Create,
+        };
+        let rh = Some(RequestHeader::new(0, rtype as i32));
+        let mut req= BytesMut::new();
+        let mut request = CreateRequest::new_full(path, data, acl, create_model);
+        request.write(&mut req);
+        let resp = CreateResponse::default();
+        let (reply_header, resp) = self.client.submit_request(rh, req, resp).await?;
+        if reply_header.err != 0 {
+            return Err(Error::from(reply_header.err as isize));
+        }
+        Ok(resp.path)
     }
 
 }
@@ -48,8 +60,15 @@ mod tests {
                 return;
             },
         };
-        zk.close().await;
-        thread::sleep(Duration::from_secs(3));
+        thread::sleep(Duration::from_secs(10));
         info!("{:?}", zk);
+    }
+
+    #[tokio::test]
+    async fn create() {
+        let mut zk = ZooKeeper::new("127.0.0.1:2181", 60000).await.unwrap();
+        info!("{:?}", zk);
+        let path = zk.create("/xjj", None, ACL::world_acl(), CreateMode::Persistent).await.unwrap();
+        info!("path: {}", path)
     }
 }

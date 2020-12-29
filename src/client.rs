@@ -10,8 +10,8 @@ use tokio::time::Duration;
 
 use crate::constants::{Error, States};
 use crate::protocol::{Deserializer, Serializer};
-use crate::protocol::req::{ConnectRequest, ReqPacket, DEATH_PTYPE};
-use crate::protocol::resp::ConnectResponse;
+use crate::protocol::req::{ConnectRequest, DEATH_PTYPE, ReqPacket, RequestHeader};
+use crate::protocol::resp::{ConnectResponse, ReplyHeader};
 use crate::ZKResult;
 
 struct SenderTask {
@@ -24,14 +24,19 @@ impl SenderTask {
         loop {
             let mut packet = match self.rx.recv().await {
                 Some(packet) if packet.ptype != DEATH_PTYPE => packet,
-                Some(deatch) => {
+                Some(death) => {
                     info!("Received DEATH REQ quit!");
                     println!("Received DEATH REQ quit!");
                     return Ok(());
-                },
+                }
                 None => continue,
             };
-            self.writer.write_buf(&mut packet.req).await;
+            let mut buf = BytesMut::new();
+            if let Some(rh) = packet.rh {
+                rh.write(&mut buf);
+            }
+            buf.extend(packet.req);
+            self.writer.write_buf(&mut Client::wrap_len_buf(buf)).await;
             self.writer.flush().await;
         }
     }
@@ -103,28 +108,15 @@ impl Client {
         Ok(client)
     }
 
-    pub(crate) async fn close(mut self) -> ZKResult<()> {
-        self.state = States::Closed;
-        Ok(())
-    }
-
-    fn create_connect_request(&self, session_timeout: i32) -> ZKResult<ConnectRequest> {
-        Ok(ConnectRequest::new(session_timeout))
-    }
-
-    async fn start_connect(&mut self, session_timeout: i32) -> ZKResult<()> {
-        if self.state.is_connected() {
-            return Ok(());
-        }
-        self.state = States::Connecting;
-
-        // 创建 connect request
+    fn create_connect_request(&self, session_timeout: i32) -> ZKResult<BytesMut> {
         let mut buf = BytesMut::new();
-        let connect_request = self.create_connect_request(session_timeout)?;
+        let connect_request = ConnectRequest::new(session_timeout);
         connect_request.write(&mut buf);
-        let wrap_buf = Client::wrap_len_buf(buf);
-        let packet = ReqPacket::new(None, wrap_buf);
-        self.packet_tx.send(packet).await;
+        Ok(Client::wrap_len_buf(buf))
+    }
+
+    async fn read_buf(&mut self) -> ZKResult<BytesMut> {
+        // 1024 够吗
         let mut buf = BytesMut::with_capacity(1024);
         loop {
             let buf_size = match self.reader.read_buf(&mut buf).await {
@@ -137,6 +129,27 @@ impl Client {
                 break;
             }
         }
+        Ok(buf)
+    }
+
+    async fn write_buf(&mut self, rh: Option<RequestHeader>, req: BytesMut) -> ZKResult<()> {
+        let packet = ReqPacket::new(rh, req);
+        self.packet_tx.send(packet).await;
+        Ok(())
+    }
+
+    async fn start_connect(&mut self, session_timeout: i32) -> ZKResult<()> {
+        if self.state.is_connected() {
+            return Ok(());
+        }
+        self.state = States::Connecting;
+
+        // 创建 connect request
+        let req = self.create_connect_request(session_timeout)?;
+
+        self.write_buf(None, req).await?;
+
+        let mut buf = self.read_buf().await?;
         let mut response = ConnectResponse::default();
         response.read(&mut buf)?;
         self.session_id = response.session_id;
@@ -144,7 +157,20 @@ impl Client {
         Ok(())
     }
 
-    fn wrap_len_buf(buf: BytesMut) -> BytesMut {
+    pub async fn submit_request<D>(&mut self, rh: Option<RequestHeader>, req: BytesMut, mut resp: D) -> ZKResult<(ReplyHeader, D)>
+        where D: Deserializer {
+        if !self.state.is_connected() {
+            return Err(Error::ConnectionLoss);
+        }
+        self.write_buf(rh, req).await?;
+        let mut buf = self.read_buf().await?;
+        let mut reply_header = ReplyHeader::default();
+        reply_header.read(&mut buf);
+        resp.read(&mut buf);
+        Ok((reply_header, resp))
+    }
+
+    pub fn wrap_len_buf(buf: BytesMut) -> BytesMut {
         let len = buf.len();
         let mut wrap_buf = BytesMut::with_capacity(4 + len);
         wrap_buf.put_i32(len as i32);

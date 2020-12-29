@@ -33,6 +33,26 @@ pub trait Serializer: Send {
     fn write_bool(&self, flag: bool, b: &mut BytesMut) {
         b.put_u8(flag as u8);
     }
+
+    fn write_string(&self, s: &str, b: &mut BytesMut) {
+        b.put_i32(s.len() as i32);
+        b.put_slice(s.as_bytes());
+    }
+
+    fn write_len(&self, i: usize, b: &mut BytesMut) {
+        b.put_u32(i as u32);
+    }
+
+    fn write_vec<S>(&self, v: &Vec<S>, b: &mut BytesMut) where S: Serializer {
+        if v.is_empty() {
+            self.write_i32(-1, b);
+            return;
+        }
+        self.write_len(v.len(), b);
+        for s in v.iter() {
+            s.write(b);
+        }
+    }
 }
 
 pub trait Deserializer {
