@@ -53,7 +53,7 @@ mod tests {
 
     #[tokio::test]
     async fn new_zk() {
-        let mut zk = match ZooKeeper::new("127.0.0.1:2181", 5000).await {
+        let zk = match ZooKeeper::new("127.0.0.1:2181", 5000).await {
             Ok(zk) => zk,
             Err(e) => {
                 error!("error in new zk {:?}", e);

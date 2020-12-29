@@ -18,7 +18,7 @@ pub type ZKResult<T> = Result<T, ZKError>;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
     #[test]
     fn it_works() {
         pretty_env_logger::init();

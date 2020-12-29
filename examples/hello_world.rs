@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate log;
 
-use tokio::prelude::*;
+
 
 use buruma::api::ZooKeeper;
 use buruma::ZKResult;
