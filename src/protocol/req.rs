@@ -103,6 +103,7 @@ impl Serializer for CreateRequest {
         self.write_string(self.path.as_str(), b);
         self.write_slice_option(self.data.clone(), b);
         self.write_vec(&self.acl, b);
+        self.write_i32(self.flags, b);
         Ok(())
     }
 }

@@ -60,9 +60,7 @@ async fn main() -> ZKResult<()> {
                 let buf_size = r.read_buf(&mut reader).await.unwrap();
                 println!("{}", buf_size);
                 if buf_size != 0 {
-                    let result = String::from_utf8(Vec::from(&reader[..])).unwrap();
-                    reader.clear();
-                    println!("{}", result);
+                    println!("{:?}", Vec::from(&reader[..]));
                     break;
                 } else {
                     sleep(Duration::from_secs(2));

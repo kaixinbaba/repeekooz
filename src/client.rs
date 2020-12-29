@@ -112,7 +112,7 @@ impl Client {
         let mut buf = BytesMut::new();
         let connect_request = ConnectRequest::new(session_timeout);
         connect_request.write(&mut buf);
-        Ok(Client::wrap_len_buf(buf))
+        Ok(buf)
     }
 
     async fn read_buf(&mut self) -> ZKResult<BytesMut> {

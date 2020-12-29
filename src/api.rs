@@ -17,7 +17,7 @@ pub struct ZooKeeper {
 
 impl ZooKeeper {
     pub async fn new(connect_string: &str, session_timeout: i32) -> ZKResult<ZooKeeper> {
-        pretty_env_logger::init();
+        pretty_env_logger::try_init();
         let client = Client::new(connect_string, session_timeout).await?;
         Ok(ZooKeeper {
             client,
@@ -68,7 +68,9 @@ mod tests {
     async fn create() {
         let mut zk = ZooKeeper::new("127.0.0.1:2181", 60000).await.unwrap();
         info!("{:?}", zk);
-        let path = zk.create("/xjj", None, ACL::world_acl(), CreateMode::Persistent).await.unwrap();
-        info!("path: {}", path)
+        let data = Some("I Love U".as_bytes());
+        let path = zk.create("/xjj", data, ACL::world_acl(), CreateMode::EphemeralSequential).await.unwrap();
+        info!("path: {}", path);
+        thread::sleep(Duration::from_secs(10));
     }
 }
