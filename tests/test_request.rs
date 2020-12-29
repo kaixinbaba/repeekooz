@@ -21,5 +21,5 @@ async fn create() {
     let mut zk = ZooKeeper::new("127.0.0.1:2181", 5000).await.unwrap();
     let data = Some("I Love U".as_bytes());
     let path = zk.create("/xjj", data, ACL::world_acl(), CreateMode::Persistent).await.unwrap();
-    info!("path: {}", path);
+    assert_eq!(path, "/xjj");
 }

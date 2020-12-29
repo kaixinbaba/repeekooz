@@ -1,5 +1,5 @@
 use crate::client::Client;
-use crate::ZKResult;
+use crate::{ZKResult, ZKError};
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
@@ -37,7 +37,7 @@ impl ZooKeeper {
         let resp = CreateResponse::default();
         let (reply_header, resp) = self.client.submit_request(rh, req, resp).await?;
         if reply_header.err != 0 {
-            return Err(Error::from(reply_header.err as isize));
+            return Err(ZKError(Error::from(reply_header.err as isize), "Error from server"));
         }
         Ok(resp.path)
     }
@@ -71,6 +71,5 @@ mod tests {
         let data = Some("I Love U".as_bytes());
         let path = zk.create("/xjj", data, ACL::world_acl(), CreateMode::EphemeralSequential).await.unwrap();
         info!("path: {}", path);
-        thread::sleep(Duration::from_secs(10));
     }
 }

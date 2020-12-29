@@ -8,11 +8,11 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::Duration;
 
+use crate::{ZKError, ZKResult};
 use crate::constants::{Error, States};
 use crate::protocol::{Deserializer, Serializer};
 use crate::protocol::req::{ConnectRequest, DEATH_PTYPE, ReqPacket, RequestHeader};
 use crate::protocol::resp::{ConnectResponse, ReplyHeader};
-use crate::ZKResult;
 
 struct SenderTask {
     rx: Receiver<ReqPacket>,
@@ -52,6 +52,54 @@ impl EventTask {
     }
 }
 
+struct HostProvider {
+    server_list: Vec<String>,
+}
+
+impl HostProvider {
+    fn validate_host(host: &str) -> ZKResult<String> {
+        let ip_port = host.split(":").collect::<Vec<&str>>();
+        if ip_port.len() != 2 {
+            return Err(ZKError(Error::BadArguments, "Invalid host address format must be 'ip:port'"));
+        }
+        match ip_port.get(1).unwrap().parse::<usize>() {
+            Ok(port) if port <= 65535 => port,
+            _ => return Err(ZKError(Error::BadArguments, "Invalid port, must be number and less than 65535")),
+        };
+
+        for ip in ip_port.get(0).unwrap().split(".") {
+            match ip.parse::<usize>() {
+                Ok(i) if i > 255 => return Err(ZKError(Error::BadArguments, "ip address must between 0 and 255")),
+                Err(_) => return Err(ZKError(Error::BadArguments, "Invalid ip, must be number")),
+                _ => (),
+            }
+        }
+        Ok(host.to_string())
+    }
+
+    pub(self) fn new(connect_string: &str) -> ZKResult<(HostProvider, String)> {
+        let split_chroot = connect_string.split("/").collect::<Vec<&str>>();
+        if split_chroot.len() > 2 {
+            return Err(ZKError(Error::BadArguments, "Invalid chroot format"));
+        }
+        let mut server_list = Vec::new();
+        for add in split_chroot.get(0).unwrap().split(",") {
+            match HostProvider::validate_host(add) {
+                Ok(s) => server_list.push(s),
+                Err(e) => return Err(e),
+            }
+        }
+
+        let mut chroot = String::from("");
+        if split_chroot.len() == 2 {
+            chroot = String::from(*split_chroot.get(1).unwrap());
+        }
+        Ok((HostProvider {
+            server_list,
+        }, chroot))
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct Client {
     server_list: Vec<String>,
@@ -62,6 +110,7 @@ pub(crate) struct Client {
     state: States,
     session_id: i64,
     password: Option<Vec<u8>>,
+    chroot: String,
 }
 
 impl Client {
@@ -70,7 +119,7 @@ impl Client {
         server_list.push(connect_string.to_string());
         let socket = match TcpStream::connect(server_list.get(0).unwrap().as_str()).await {
             Ok(socket) => socket,
-            Err(e) => return Err(Error::BadArguments),
+            Err(e) => return Err(ZKError(Error::BadArguments, "socket error")),
         };
 
         let (mut reader, mut writer) = io::split(socket);
@@ -102,6 +151,7 @@ impl Client {
             state: States::NotConnected,
             session_id: 0,
             password: None,
+            chroot: String::from(""),
         };
         client.start_connect(session_timeout).await?;
         client.state = States::Connected;
@@ -121,7 +171,7 @@ impl Client {
         loop {
             let buf_size = match self.reader.read_buf(&mut buf).await {
                 Ok(buf_size) => buf_size,
-                _ => return Err(Error::ReadSocketError),
+                _ => return Err(ZKError(Error::ReadSocketError, "read socket error")),
             };
             if buf_size > 0 {
                 // skip first size
@@ -160,7 +210,7 @@ impl Client {
     pub async fn submit_request<D>(&mut self, rh: Option<RequestHeader>, req: BytesMut, mut resp: D) -> ZKResult<(ReplyHeader, D)>
         where D: Deserializer {
         if !self.state.is_connected() {
-            return Err(Error::ConnectionLoss);
+            return Err(ZKError(Error::ConnectionLoss, "client may be closed"));
         }
         self.write_buf(rh, req).await?;
         let mut buf = self.read_buf().await?;
