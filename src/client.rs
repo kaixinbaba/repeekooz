@@ -6,7 +6,7 @@ use tokio::net::TcpStream;
 use tokio::prelude::*;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::time::Duration;
+
 
 use crate::{ZKError, ZKResult};
 use crate::constants::{Error, States};
@@ -22,9 +22,9 @@ struct SenderTask {
 impl SenderTask {
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
         loop {
-            let mut packet = match self.rx.recv().await {
+            let packet = match self.rx.recv().await {
                 Some(packet) if packet.ptype != DEATH_PTYPE => packet,
-                Some(death) => {
+                Some(_death) => {
                     info!("Received DEATH REQ quit!");
                     println!("Received DEATH REQ quit!");
                     return Ok(());
@@ -119,10 +119,10 @@ impl Client {
         server_list.push(connect_string.to_string());
         let socket = match TcpStream::connect(server_list.get(0).unwrap().as_str()).await {
             Ok(socket) => socket,
-            Err(e) => return Err(ZKError(Error::BadArguments, "socket error")),
+            Err(_e) => return Err(ZKError(Error::BadArguments, "socket error")),
         };
 
-        let (mut reader, mut writer) = io::split(socket);
+        let (reader, writer) = io::split(socket);
         // start send thread
         let (packet_tx, packet_rx): (Sender<ReqPacket>, Receiver<ReqPacket>) = mpsc::channel(17120);
 

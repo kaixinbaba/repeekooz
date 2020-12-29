@@ -1,9 +1,9 @@
 use crate::client::Client;
 use crate::{ZKResult, ZKError};
-use std::sync::mpsc;
-use std::sync::mpsc::Sender;
-use std::thread;
-use tokio::time::Duration;
+
+
+
+
 use crate::protocol::req::{ACL, CreateRequest, RequestHeader};
 use crate::constants::{CreateMode, Error, OpCode};
 use crate::protocol::resp::CreateResponse;
@@ -32,7 +32,7 @@ impl ZooKeeper {
         };
         let rh = Some(RequestHeader::new(0, rtype as i32));
         let mut req= BytesMut::new();
-        let mut request = CreateRequest::new_full(path, data, acl, create_model);
+        let request = CreateRequest::new_full(path, data, acl, create_model);
         request.write(&mut req);
         let resp = CreateResponse::default();
         let (reply_header, resp) = self.client.submit_request(rh, req, resp).await?;

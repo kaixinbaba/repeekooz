@@ -11,6 +11,7 @@ extern crate lazy_static;
 
 use crate::constants::Error;
 
+#[derive(Debug)]
 pub struct ZKError(Error, &'static str);
 
 pub type ZKResult<T> = Result<T, ZKError>;
