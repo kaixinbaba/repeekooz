@@ -1,4 +1,3 @@
-use std::sync::atomic::AtomicU32;
 use std::thread;
 
 use bytes::{Buf, BufMut, BytesMut};
@@ -74,7 +73,7 @@ impl HostProvider {
                 return Err(ZKError(
                     Error::BadArguments,
                     "Invalid port, must be number and less than 65535",
-                ))
+                ));
             }
         };
 
@@ -84,7 +83,7 @@ impl HostProvider {
                     return Err(ZKError(
                         Error::BadArguments,
                         "ip address must between 0 and 255",
-                    ))
+                    ));
                 }
                 Err(_) => return Err(ZKError(Error::BadArguments, "Invalid ip, must be number")),
                 _ => (),
