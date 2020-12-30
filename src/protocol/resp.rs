@@ -45,7 +45,6 @@ pub struct CreateResponse {
 }
 
 impl Deserializer for CreateResponse {
-
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
         self.path = self.read_string(b);
         Ok(())

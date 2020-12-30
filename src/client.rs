@@ -1,3 +1,4 @@
+use std::sync::atomic::AtomicU32;
 use std::thread;
 
 use bytes::{Buf, BufMut, BytesMut};
@@ -7,12 +8,11 @@ use tokio::prelude::*;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-
-use crate::{ZKError, ZKResult};
 use crate::constants::{Error, States};
-use crate::protocol::{Deserializer, Serializer};
-use crate::protocol::req::{ConnectRequest, DEATH_PTYPE, ReqPacket, RequestHeader};
+use crate::protocol::req::{ConnectRequest, ReqPacket, RequestHeader, DEATH_PTYPE};
 use crate::protocol::resp::{ConnectResponse, ReplyHeader};
+use crate::protocol::{Deserializer, Serializer};
+use crate::{ZKError, ZKResult};
 
 struct SenderTask {
     rx: Receiver<ReqPacket>,
@@ -52,24 +52,40 @@ impl EventTask {
     }
 }
 
+#[derive(Debug)]
 struct HostProvider {
     server_list: Vec<String>,
+    current_index: usize,
+    server_len: usize,
 }
 
 impl HostProvider {
     fn validate_host(host: &str) -> ZKResult<String> {
         let ip_port = host.split(":").collect::<Vec<&str>>();
         if ip_port.len() != 2 {
-            return Err(ZKError(Error::BadArguments, "Invalid host address format must be 'ip:port'"));
+            return Err(ZKError(
+                Error::BadArguments,
+                "Invalid host address format must be 'ip:port'",
+            ));
         }
         match ip_port.get(1).unwrap().parse::<usize>() {
             Ok(port) if port <= 65535 => port,
-            _ => return Err(ZKError(Error::BadArguments, "Invalid port, must be number and less than 65535")),
+            _ => {
+                return Err(ZKError(
+                    Error::BadArguments,
+                    "Invalid port, must be number and less than 65535",
+                ))
+            }
         };
 
         for ip in ip_port.get(0).unwrap().split(".") {
             match ip.parse::<usize>() {
-                Ok(i) if i > 255 => return Err(ZKError(Error::BadArguments, "ip address must between 0 and 255")),
+                Ok(i) if i > 255 => {
+                    return Err(ZKError(
+                        Error::BadArguments,
+                        "ip address must between 0 and 255",
+                    ))
+                }
                 Err(_) => return Err(ZKError(Error::BadArguments, "Invalid ip, must be number")),
                 _ => (),
             }
@@ -94,15 +110,32 @@ impl HostProvider {
         if split_chroot.len() == 2 {
             chroot = String::from(*split_chroot.get(1).unwrap());
         }
-        Ok((HostProvider {
-            server_list,
-        }, chroot))
+        let server_len = server_list.len();
+        Ok((
+            HostProvider {
+                server_list,
+                current_index: 0,
+                server_len,
+            },
+            chroot,
+        ))
+    }
+
+    pub(self) fn pick_host(&mut self) -> &str {
+        let address = self.server_list.get(self.current_index).unwrap();
+        let mut new_index = self.current_index + 1;
+        if new_index == self.server_len {
+            new_index = 0;
+        }
+        self.current_index = new_index;
+
+        address
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct Client {
-    server_list: Vec<String>,
+    host_provider: HostProvider,
     session_timeout: i32,
     reader: ReadHalf<TcpStream>,
     packet_tx: Sender<ReqPacket>,
@@ -115,9 +148,8 @@ pub(crate) struct Client {
 
 impl Client {
     pub(crate) async fn new(connect_string: &str, session_timeout: i32) -> ZKResult<Client> {
-        let mut server_list = Vec::new();
-        server_list.push(connect_string.to_string());
-        let socket = match TcpStream::connect(server_list.get(0).unwrap().as_str()).await {
+        let (mut host_provider, chroot) = HostProvider::new(connect_string)?;
+        let socket = match TcpStream::connect(host_provider.pick_host()).await {
             Ok(socket) => socket,
             Err(_e) => return Err(ZKError(Error::BadArguments, "socket error")),
         };
@@ -137,13 +169,11 @@ impl Client {
 
         // start event thread
         let (event_tx, event_rx) = mpsc::channel(17120);
-        let event_task = EventTask {
-            rx: event_rx,
-        };
+        let event_task = EventTask { rx: event_rx };
         thread::spawn(move || event_task.run());
 
         let mut client = Client {
-            server_list,
+            host_provider,
             session_timeout,
             reader,
             packet_tx,
@@ -151,7 +181,7 @@ impl Client {
             state: States::NotConnected,
             session_id: 0,
             password: None,
-            chroot: String::from(""),
+            chroot,
         };
         client.start_connect(session_timeout).await?;
         client.state = States::Connected;
@@ -207,8 +237,15 @@ impl Client {
         Ok(())
     }
 
-    pub async fn submit_request<D>(&mut self, rh: Option<RequestHeader>, req: BytesMut, mut resp: D) -> ZKResult<(ReplyHeader, D)>
-        where D: Deserializer {
+    pub async fn submit_request<D>(
+        &mut self,
+        rh: Option<RequestHeader>,
+        req: BytesMut,
+        mut resp: D,
+    ) -> ZKResult<(ReplyHeader, D)>
+    where
+        D: Deserializer,
+    {
         if !self.state.is_connected() {
             return Err(ZKError(Error::ConnectionLoss, "client may be closed"));
         }
@@ -228,4 +265,3 @@ impl Client {
         wrap_buf
     }
 }
-

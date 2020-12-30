@@ -2,17 +2,9 @@
 extern crate log;
 
 
-
-
-
-
-
 use buruma::api::ZooKeeper;
 use buruma::constants::CreateMode;
-
-use buruma::protocol::req::{ACL};
-
-
+use buruma::protocol::req::ACL;
 
 mod common;
 

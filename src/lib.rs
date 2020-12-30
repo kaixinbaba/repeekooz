@@ -1,15 +1,14 @@
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate log;
+
+use crate::constants::Error;
+
 pub mod protocol;
 pub mod constants;
 pub mod api;
 mod client;
-
-#[macro_use]
-extern crate log;
-
-#[macro_use]
-extern crate lazy_static;
-
-use crate::constants::Error;
 
 #[derive(Debug)]
 pub struct ZKError(Error, &'static str);
@@ -18,7 +17,6 @@ pub type ZKResult<T> = Result<T, ZKError>;
 
 #[cfg(test)]
 mod tests {
-    
     #[test]
     fn it_works() {
         pretty_env_logger::init();

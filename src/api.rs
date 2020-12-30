@@ -1,13 +1,10 @@
-use crate::client::Client;
-use crate::{ZKResult, ZKError};
-
-
-
-
-use crate::protocol::req::{ACL, CreateRequest, RequestHeader};
-use crate::constants::{CreateMode, Error, OpCode};
-use crate::protocol::resp::CreateResponse;
 use bytes::BytesMut;
+
+use crate::{ZKError, ZKResult};
+use crate::client::Client;
+use crate::constants::{CreateMode, Error, OpCode};
+use crate::protocol::req::{ACL, CreateRequest, RequestHeader};
+use crate::protocol::resp::CreateResponse;
 use crate::protocol::Serializer;
 
 #[derive(Debug)]
@@ -25,13 +22,12 @@ impl ZooKeeper {
     }
 
     pub async fn create(&mut self, path: &str, data: Option<&[u8]>, acl: Vec<ACL>, create_model: CreateMode) -> ZKResult<String> {
-
         let rtype = match create_model {
             CreateMode::Container => OpCode::CreateContainer,
             _ => OpCode::Create,
         };
         let rh = Some(RequestHeader::new(0, rtype as i32));
-        let mut req= BytesMut::new();
+        let mut req = BytesMut::new();
         let request = CreateRequest::new_full(path, data, acl, create_model);
         request.write(&mut req);
         let resp = CreateResponse::default();
@@ -41,15 +37,15 @@ impl ZooKeeper {
         }
         Ok(resp.path)
     }
-
 }
 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::thread;
     use std::time::Duration;
+
+    use super::*;
 
     #[tokio::test]
     async fn new_zk() {
@@ -58,7 +54,7 @@ mod tests {
             Err(e) => {
                 error!("error in new zk {:?}", e);
                 return;
-            },
+            }
         };
         thread::sleep(Duration::from_secs(10));
         info!("{:?}", zk);
