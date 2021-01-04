@@ -105,9 +105,9 @@ impl HostProvider {
             }
         }
 
-        let mut chroot = String::from("");
+        let mut chroot = String::from("/");
         if split_chroot.len() == 2 {
-            chroot = String::from(*split_chroot.get(1).unwrap());
+            chroot = String::from("/".to_string() + *split_chroot.get(1).unwrap());
         }
         let server_len = server_list.len();
         Ok((
@@ -146,6 +146,18 @@ pub(crate) struct Client {
 }
 
 impl Client {
+    pub(crate) fn get_path(&self, path: &str) -> String {
+        let chroot = self.chroot.clone();
+        let mut path = path.to_string();
+        if !path.starts_with("/") {
+            path = "/".to_string() + path.as_str();
+        }
+        if chroot != "/" {
+            path = chroot + path.as_str()
+        }
+        path
+    }
+
     pub(crate) async fn new(connect_string: &str, session_timeout: i32) -> ZKResult<Client> {
         let (mut host_provider, chroot) = HostProvider::new(connect_string)?;
         let socket = match TcpStream::connect(host_provider.pick_host()).await {
@@ -195,7 +207,7 @@ impl Client {
     }
 
     async fn read_buf(&mut self) -> ZKResult<BytesMut> {
-        // 1024 够吗
+        // FIXME 1024 够吗
         let mut buf = BytesMut::with_capacity(1024);
         loop {
             let buf_size = match self.reader.read_buf(&mut buf).await {

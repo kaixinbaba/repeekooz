@@ -2,7 +2,7 @@ use std::hash::Hasher;
 
 use bytes::BytesMut;
 
-use crate::constants::{ANYONE, CreateMode, Perms, WORLD};
+use crate::constants::{CreateMode, Perms, ANYONE, WORLD};
 use crate::protocol::Serializer;
 use crate::ZKResult;
 
@@ -14,10 +14,7 @@ pub struct RequestHeader {
 
 impl RequestHeader {
     pub fn new(xid: i32, rtype: i32) -> RequestHeader {
-        RequestHeader {
-            xid,
-            rtype,
-        }
+        RequestHeader { xid, rtype }
     }
 }
 
@@ -118,13 +115,18 @@ impl CreateRequest {
         }
     }
 
-    pub fn new_full(path: &str, data: Option<&[u8]>, acl: Vec<ACL>, create_mode: CreateMode) -> Self {
+    pub fn new_full(
+        path: String,
+        data: Option<&[u8]>,
+        acl: Vec<ACL>,
+        create_mode: CreateMode,
+    ) -> Self {
         let data = match data {
             Some(d) => Some(Vec::from(d)),
             _ => None,
         };
         CreateRequest {
-            path: String::from(path),
+            path,
             data,
             acl,
             flags: create_mode as i32,
@@ -143,11 +145,7 @@ pub struct ReqPacket {
 
 impl ReqPacket {
     pub(crate) fn new(rh: Option<RequestHeader>, req: BytesMut) -> ReqPacket {
-        ReqPacket {
-            ptype: 0,
-            rh,
-            req,
-        }
+        ReqPacket { ptype: 0, rh, req }
     }
 
     pub(crate) fn death_request() -> ReqPacket {
