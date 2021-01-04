@@ -1,11 +1,11 @@
 use bytes::BytesMut;
 
 use crate::client::Client;
-use crate::constants::{CreateMode, Error, OpCode};
+use crate::constants::{CreateMode, Error, OpCode, IGNORE_VERSION};
 use crate::protocol::req::{CreateRequest, RequestHeader, ACL};
 use crate::protocol::resp::CreateResponse;
 use crate::protocol::Serializer;
-use crate::{ZKError, ZKResult};
+use crate::{paths, ZKError, ZKResult};
 
 #[derive(Debug)]
 pub struct ZooKeeper {
@@ -26,6 +26,7 @@ impl ZooKeeper {
         acl: Vec<ACL>,
         create_model: CreateMode,
     ) -> ZKResult<String> {
+        paths::validate_path(path)?;
         let rtype = match create_model {
             CreateMode::Container => OpCode::CreateContainer,
             _ => OpCode::Create,
@@ -43,5 +44,15 @@ impl ZooKeeper {
             ));
         }
         Ok(resp.path)
+    }
+
+    pub async fn delete(&mut self, path: &str) -> ZKResult<()> {
+        self.delete_with_version(path, IGNORE_VERSION).await
+    }
+
+    pub async fn delete_with_version(&mut self, path: &str, version: i32) -> ZKResult<()> {
+        paths::validate_path(path)?;
+        let rh = Some(RequestHeader::new(0, OpCode::Delete as i32));
+        Ok(())
     }
 }

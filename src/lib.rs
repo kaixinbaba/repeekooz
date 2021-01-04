@@ -8,6 +8,7 @@ use crate::constants::Error;
 pub mod api;
 mod client;
 pub mod constants;
+mod paths;
 pub mod protocol;
 
 #[derive(Debug)]

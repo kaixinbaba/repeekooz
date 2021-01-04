@@ -4,11 +4,16 @@ pub enum Perms {
     Create = 1 << 2,
     Delete = 1 << 3,
     ACL = 1 << 4,
-    All = Perms::Read as isize | Perms::Write as isize | Perms::Create as isize | Perms::Delete as isize | Perms::ACL as isize,
+    All = Perms::Read as isize
+        | Perms::Write as isize
+        | Perms::Create as isize
+        | Perms::Delete as isize
+        | Perms::ACL as isize,
 }
 
 pub const WORLD: &str = "world";
 pub const ANYONE: &str = "anyone";
+pub const IGNORE_VERSION: i32 = -1;
 
 pub enum WatcherType {
     Children = 1,
@@ -226,4 +231,3 @@ mod test {
         assert_eq!(Error::from(100), Error::ReadSocketError);
     }
 }
-
