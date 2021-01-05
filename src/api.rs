@@ -2,8 +2,8 @@ use bytes::BytesMut;
 
 use crate::client::Client;
 use crate::constants::{CreateMode, Error, OpCode, IGNORE_VERSION};
-use crate::protocol::req::{CreateRequest, RequestHeader, ACL};
-use crate::protocol::resp::CreateResponse;
+use crate::protocol::req::{CreateRequest, DeleteRequest, RequestHeader, ACL};
+use crate::protocol::resp::{CreateResponse, IgnoreResponse};
 use crate::protocol::Serializer;
 use crate::{paths, ZKError, ZKResult};
 
@@ -53,6 +53,17 @@ impl ZooKeeper {
     pub async fn delete_with_version(&mut self, path: &str, version: i32) -> ZKResult<()> {
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(0, OpCode::Delete as i32));
+        let mut req = BytesMut::new();
+        let request = DeleteRequest::new(path, version);
+        request.write(&mut req);
+        let resp = IgnoreResponse::default();
+        let (reply_header, _) = self.client.submit_request(rh, req, resp).await?;
+        if reply_header.err != 0 {
+            return Err(ZKError(
+                Error::from(reply_header.err as isize),
+                "Error from server",
+            ));
+        }
         Ok(())
     }
 }

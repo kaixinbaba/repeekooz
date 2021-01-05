@@ -156,3 +156,25 @@ impl ReqPacket {
         }
     }
 }
+
+#[derive(Debug, Default)]
+pub struct DeleteRequest {
+    path: String,
+    version: i32,
+}
+
+impl Serializer for DeleteRequest {
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        self.write_string(self.path.as_str(), b);
+        self.write_i32(self.version, b);
+        Ok(())
+    }
+}
+impl DeleteRequest {
+    pub fn new(path: &str, version: i32) -> Self {
+        DeleteRequest {
+            path: path.to_string(),
+            version,
+        }
+    }
+}
