@@ -171,10 +171,7 @@ impl Serializer for DeleteRequest {
     }
 }
 impl DeleteRequest {
-    pub fn new(path: &str, version: i32) -> Self {
-        DeleteRequest {
-            path: path.to_string(),
-            version,
-        }
+    pub fn new(path: String, version: i32) -> Self {
+        DeleteRequest { path, version }
     }
 }
