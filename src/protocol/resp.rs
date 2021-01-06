@@ -55,7 +55,7 @@ impl Deserializer for CreateResponse {
 pub struct IgnoreResponse {}
 
 impl Deserializer for IgnoreResponse {
-    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+    fn read(&mut self, _b: &mut BytesMut) -> ZKResult<()> {
         Ok(())
     }
 }
