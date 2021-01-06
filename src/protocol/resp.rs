@@ -2,6 +2,7 @@ use bytes::BytesMut;
 
 use crate::protocol::Deserializer;
 use crate::ZKResult;
+use std::os::macos::raw::stat;
 
 #[derive(Debug, Default)]
 pub struct ReplyHeader {
@@ -56,6 +57,52 @@ pub struct IgnoreResponse {}
 
 impl Deserializer for IgnoreResponse {
     fn read(&mut self, _b: &mut BytesMut) -> ZKResult<()> {
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Stat {
+    pub czxid: i64,
+    pub mzxid: i64,
+    pub ctime: i64,
+    pub mtime: i64,
+    pub version: i32,
+    pub cversion: i32,
+    pub aversion: i32,
+    pub ephemeral_owner: i64,
+    pub data_length: i32,
+    pub num_children: i32,
+    pub pzxid: i64,
+}
+
+impl Deserializer for Stat {
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        self.czxid = self.read_i64(b);
+        self.mzxid = self.read_i64(b);
+        self.ctime = self.read_i64(b);
+        self.mtime = self.read_i64(b);
+        self.version = self.read_i32(b);
+        self.cversion = self.read_i32(b);
+        self.aversion = self.read_i32(b);
+        self.ephemeral_owner = self.read_i64(b);
+        self.data_length = self.read_i32(b);
+        self.num_children = self.read_i32(b);
+        self.pzxid = self.read_i64(b);
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct SetDataResponse {
+    pub stat: Stat,
+}
+
+impl Deserializer for SetDataResponse {
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        let mut stat = Stat::default();
+        stat.read(b)?;
+        self.stat = stat;
         Ok(())
     }
 }

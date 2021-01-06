@@ -22,6 +22,8 @@ async fn basic() {
         .await
         .unwrap();
     assert_eq!(path, basic_path);
+    let stat = zk.set_data(basic_path, "buruma".as_bytes()).await.unwrap();
+    info!("{:?}", stat);
     // 删除节点
     zk.delete(basic_path).await.unwrap();
 }

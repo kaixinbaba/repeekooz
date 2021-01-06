@@ -175,3 +175,29 @@ impl DeleteRequest {
         DeleteRequest { path, version }
     }
 }
+
+#[derive(Debug, Default)]
+pub struct SetDataRequest {
+    path: String,
+    data: Vec<u8>,
+    version: i32,
+}
+
+impl Serializer for SetDataRequest {
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        self.write_string(self.path.as_str(), b);
+        self.write_slice(self.data.clone(), b);
+        self.write_i32(self.version, b);
+        Ok(())
+    }
+}
+
+impl SetDataRequest {
+    pub fn new(path: String, data: &[u8], version: i32) -> Self {
+        SetDataRequest {
+            path,
+            data: Vec::from(data),
+            version,
+        }
+    }
+}

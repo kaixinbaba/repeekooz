@@ -6,8 +6,8 @@ use bytes::BytesMut;
 
 use crate::client::Client;
 use crate::constants::{CreateMode, Error, OpCode, IGNORE_VERSION};
-use crate::protocol::req::{CreateRequest, DeleteRequest, RequestHeader, ACL};
-use crate::protocol::resp::{CreateResponse, IgnoreResponse};
+use crate::protocol::req::{CreateRequest, DeleteRequest, RequestHeader, SetDataRequest, ACL};
+use crate::protocol::resp::{CreateResponse, IgnoreResponse, SetDataResponse, Stat};
 use crate::protocol::Serializer;
 use crate::{paths, ZKError, ZKResult};
 
@@ -63,7 +63,7 @@ impl ZooKeeper {
         self.delete_with_version(path, IGNORE_VERSION).await
     }
 
-    /// 删除目标路径的节点数据带着版本号，实现类似乐观锁，满足版本号才能删除
+    /// 删除目标路径的节点数据携带版本条件，满足版本号才能删除
     pub async fn delete_with_version(&mut self, path: &str, version: i32) -> ZKResult<()> {
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(0, OpCode::Delete as i32));
@@ -79,5 +79,33 @@ impl ZooKeeper {
             ));
         }
         Ok(())
+    }
+
+    /// 为目标路径设置数据
+    pub async fn set_data(&mut self, path: &str, data: &[u8]) -> ZKResult<Stat> {
+        self.set_data_with_version(path, data, IGNORE_VERSION).await
+    }
+
+    /// 为目标路径设置数据，携带版本条件，满足版本号才能设置成功
+    pub async fn set_data_with_version(
+        &mut self,
+        path: &str,
+        data: &[u8],
+        version: i32,
+    ) -> ZKResult<Stat> {
+        paths::validate_path(path)?;
+        let rh = Some(RequestHeader::new(0, OpCode::SetData as i32));
+        let mut req = BytesMut::new();
+        let request = SetDataRequest::new(self.client.get_path(path), data, version);
+        request.write(&mut req);
+        let resp = SetDataResponse::default();
+        let (reply_header, resp) = self.client.submit_request(rh, req, resp).await?;
+        if reply_header.err != 0 {
+            return Err(ZKError(
+                Error::from(reply_header.err as isize),
+                "Error from server",
+            ));
+        }
+        Ok(resp.stat)
     }
 }
