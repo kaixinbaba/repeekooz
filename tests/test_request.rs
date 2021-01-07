@@ -34,10 +34,11 @@ async fn basic() {
     zk.delete(basic_path).await.unwrap();
 }
 
+#[derive(Debug, Hash)]
 struct WatcherDemo;
 
 impl Watcher for WatcherDemo {
-    fn process(&self, event: WatchedEvent) -> ZKResult<()> {
+    fn process(&self, event: &WatchedEvent) -> ZKResult<()> {
         info!("{:?}", event);
         Ok(())
     }

@@ -21,9 +21,10 @@ pub struct ZooKeeper {
     client: Client,
 }
 
+#[derive(Debug, Hash)]
 struct DummyWatcher;
 impl Watcher for DummyWatcher {
-    fn process(&self, event: WatchedEvent) -> ZKResult<()> {
+    fn process(&self, _: &WatchedEvent) -> ZKResult<()> {
         Ok(())
     }
 }
@@ -109,24 +110,31 @@ impl ZooKeeper {
         path: &str,
         stat: Option<&mut Stat>,
     ) -> ZKResult<Vec<u8>> {
-        self.get_data::<DummyWatcher>(path, None, stat).await
+        self.get_data(path, None::<DummyWatcher>, stat).await
     }
 
     /// 获取目标路径数据，需要回调通知
-    pub async fn get_data<W: Watcher>(
+    pub async fn get_data(
         &mut self,
         path: &str,
-        watcher: Option<W>,
+        watcher: Option<impl Watcher + 'static>,
         stat: Option<&mut Stat>,
     ) -> ZKResult<Vec<u8>> {
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(0, OpCode::GetData as i32));
         let mut req = BytesMut::new();
+        let full_path = self.client.get_path(path);
         let watch = match watcher {
-            Some(_) => true,
+            Some(w) => {
+                // 注册本地回调
+                self.client
+                    .register_data_watcher(full_path.clone(), Box::new(w))
+                    .await?;
+                true
+            }
             _ => false,
         };
-        let request = GetDataRequest::new(self.client.get_path(path), watch);
+        let request = GetDataRequest::new(full_path, watch);
         request.write(&mut req);
         let resp = GetDataResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;

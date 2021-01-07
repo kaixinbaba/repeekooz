@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use std::sync::Arc;
 use std::thread;
 
 use bytes::{Buf, BufMut, BytesMut};
@@ -7,11 +9,12 @@ use tokio::prelude::*;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::constants::{Error, States};
+use crate::constants::{Error, States, XidType};
 use crate::protocol::req::{ConnectRequest, ReqPacket, RequestHeader, DEATH_PTYPE};
-use crate::protocol::resp::{ConnectResponse, ReplyHeader};
+use crate::protocol::resp::{ConnectResponse, ReplyHeader, WatcherEvent};
 use crate::protocol::{Deserializer, Serializer};
-use crate::{ZKError, ZKResult};
+use crate::watcher::WatcherManager;
+use crate::{WatchedEvent, Watcher, ZKError, ZKResult};
 
 struct SenderTask {
     packet_rx: Receiver<ReqPacket>,
@@ -43,45 +46,84 @@ impl SenderTask {
 struct ReceiverTask {
     buf_tx: Sender<(ReplyHeader, BytesMut)>,
     reader: ReadHalf<TcpStream>,
+    event_tx: Sender<WatchedEvent>,
+    // FIXME 用这个字段区分是否连接，是否可靠，之后的重连怎么处理
     is_connected: bool,
 }
 
 impl ReceiverTask {
+    async fn read_origin_buf(&mut self) -> BytesMut {
+        // FIXME 1024 够吗
+        let mut buf = BytesMut::with_capacity(1024);
+        loop {
+            let buf_size = match self.reader.read_buf(&mut buf).await {
+                Ok(buf_size) => buf_size,
+                _ => break,
+            };
+            if buf_size > 0 {
+                // skip first size
+                buf.get_i32();
+                break;
+            }
+        }
+        buf
+    }
+
+    async fn handle_reply(&self, mut reply_header: ReplyHeader, mut buf: BytesMut) {
+        reply_header.read(&mut buf);
+        // 区分不同的 xid
+        match XidType::from(reply_header.xid) {
+            XidType::Notification => {
+                let mut server_event = WatcherEvent::default();
+                server_event.read(&mut buf);
+                self.event_tx.send(WatchedEvent::from(server_event)).await;
+            }
+            XidType::Ping => {}
+            XidType::AuthPacket => {}
+            XidType::SetWatches => {}
+            XidType::Response => {
+                self.buf_tx.send((reply_header, buf)).await;
+            }
+        }
+    }
+
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
         loop {
-            // FIXME 1024 够吗
-            let mut buf = BytesMut::with_capacity(1024);
-            loop {
-                let buf_size = match self.reader.read_buf(&mut buf).await {
-                    Ok(buf_size) => buf_size,
-                    _ => break,
-                };
-                if buf_size > 0 {
-                    // skip first size
-                    buf.get_i32();
-                    break;
-                }
-            }
-            let mut reply_header = ReplyHeader::default();
-            if self.is_connected {
-                reply_header.read(&mut buf);
-                self.buf_tx.send((reply_header, buf)).await;
-            } else {
+            let buf = self.read_origin_buf().await;
+            let reply_header = ReplyHeader::default();
+
+            if !self.is_connected {
                 // connect response 没有 ReplyHeader
                 self.buf_tx.send((reply_header, buf)).await;
                 self.is_connected = true;
+            } else {
+                self.handle_reply(reply_header, buf).await;
             }
         }
     }
 }
 
 struct EventTask {
-    rx: Receiver<String>,
+    event_rx: Receiver<WatchedEvent>,
+    watcher_manager: Arc<WatcherManager>,
 }
 
 impl EventTask {
-    pub(self) fn run(&self) {
-        info!("in event loop");
+    async fn process_event(&self, event: WatchedEvent, watchers: Vec<Box<dyn Watcher>>) {
+        for w in watchers {
+            w.process(&event);
+        }
+    }
+
+    pub(self) async fn run(&mut self) -> Result<(), io::Error> {
+        loop {
+            let event = match self.event_rx.recv().await {
+                Some(event) => event,
+                None => continue,
+            };
+            let watchers = self.watcher_manager.find_need_triggered_watchers(&event);
+            self.process_event(event, watchers).await;
+        }
     }
 }
 
@@ -172,14 +214,23 @@ pub(crate) struct Client {
     session_timeout: i32,
     packet_tx: Sender<ReqPacket>,
     buf_rx: Receiver<(ReplyHeader, BytesMut)>,
-    event_tx: Sender<String>,
     state: States,
     session_id: i64,
     password: Option<Vec<u8>>,
     chroot: String,
+    watcher_manager: Arc<WatcherManager>,
 }
 
 impl Client {
+    pub(crate) async fn register_data_watcher(
+        &self,
+        path: String,
+        watcher: Box<dyn Watcher>,
+    ) -> ZKResult<()> {
+        self.watcher_manager.register_data_watcher(path, watcher)?;
+        Ok(())
+    }
+
     pub(crate) fn get_path(&self, path: &str) -> String {
         let chroot = self.chroot.clone();
         let mut path = path.to_string();
@@ -208,6 +259,19 @@ impl Client {
             Ok::<_, io::Error>(())
         });
 
+        let watcher_manager = Arc::new(WatcherManager::new(false));
+
+        // start event thread
+        let (event_tx, event_rx) = mpsc::channel(2017);
+        let mut event_task = EventTask {
+            event_rx,
+            watcher_manager: watcher_manager.clone(),
+        };
+        tokio::spawn(async move {
+            event_task.run().await;
+            Ok::<_, io::Error>(())
+        });
+
         // start receive thread
         let (buf_tx, buf_rx): (
             Sender<(ReplyHeader, BytesMut)>,
@@ -216,6 +280,7 @@ impl Client {
         let mut receiver_task = ReceiverTask {
             buf_tx,
             reader,
+            event_tx,
             is_connected: false,
         };
         tokio::spawn(async move {
@@ -223,21 +288,16 @@ impl Client {
             Ok::<_, io::Error>(())
         });
 
-        // start event thread
-        let (event_tx, event_rx) = mpsc::channel(2017);
-        let event_task = EventTask { rx: event_rx };
-        thread::spawn(move || event_task.run());
-
         let mut client = Client {
             host_provider,
             session_timeout,
             packet_tx,
             buf_rx,
-            event_tx,
             state: States::NotConnected,
             session_id: 0,
             password: None,
             chroot,
+            watcher_manager: watcher_manager.clone(),
         };
         client.start_connect(session_timeout).await?;
         client.state = States::Connected;

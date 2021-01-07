@@ -31,7 +31,24 @@ pub enum EventType {
     ChildWatchRemoved = 6,
     PersistentWatchRemoved = 7,
 }
-#[derive(Debug)]
+
+impl From<isize> for EventType {
+    fn from(code: isize) -> Self {
+        match code {
+            -1 => EventType::None,
+            1 => EventType::NodeCreated,
+            2 => EventType::NodeDeleted,
+            3 => EventType::NodeDataChanged,
+            4 => EventType::NodeChildrenChanged,
+            5 => EventType::DataWatchRemoved,
+            6 => EventType::ChildWatchRemoved,
+            7 => EventType::PersistentWatchRemoved,
+            _ => panic!("Invalid code [{}] for EventType", code),
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum KeeperState {
     Disconnected = 0,
     SyncConnected = 3,
@@ -40,6 +57,21 @@ pub enum KeeperState {
     SaslAuthenticated = 6,
     Expired = -112,
     Closed = 7,
+}
+
+impl From<isize> for KeeperState {
+    fn from(code: isize) -> Self {
+        match code {
+            0 => KeeperState::Disconnected,
+            3 => KeeperState::SyncConnected,
+            4 => KeeperState::AuthFailed,
+            5 => KeeperState::ConnectedReadOnly,
+            6 => KeeperState::SaslAuthenticated,
+            -112 => KeeperState::Expired,
+            7 => KeeperState::Closed,
+            _ => panic!("Invalid code [{}] for KeeperState", code),
+        }
+    }
 }
 
 pub enum AddWatchMode {
@@ -131,6 +163,19 @@ pub enum XidType {
     Ping = -2,
     AuthPacket = -4,
     SetWatches = -8,
+    Response,
+}
+
+impl From<i32> for XidType {
+    fn from(code: i32) -> Self {
+        match code {
+            -1 => XidType::Notification,
+            -2 => XidType::Ping,
+            -4 => XidType::AuthPacket,
+            -8 => XidType::SetWatches,
+            _ => XidType::Response,
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]

@@ -122,3 +122,19 @@ impl Deserializer for GetDataResponse {
         Ok(())
     }
 }
+
+#[derive(Debug, Default)]
+pub struct WatcherEvent {
+    pub keep_state: i32,
+    pub event_type: i32,
+    pub path: String,
+}
+
+impl Deserializer for WatcherEvent {
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        self.keep_state = self.read_i32(b);
+        self.event_type = self.read_i32(b);
+        self.path = self.read_string(b);
+        Ok(())
+    }
+}
