@@ -32,6 +32,11 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
+// re-export, 常用的结构体全部都要导出
+pub use api::ZooKeeper;
+pub use constants::{EventType, KeeperState};
+pub use watcher::{WatchedEvent, Watcher};
+
 use crate::constants::Error;
 
 pub mod api;
@@ -39,11 +44,9 @@ mod client;
 pub mod constants;
 mod paths;
 pub mod protocol;
+mod watcher;
 
 #[derive(Debug)]
 pub struct ZKError(Error, &'static str);
 
 pub type ZKResult<T> = Result<T, ZKError>;
-
-// re-export, 常用的结构体全部都要导出
-pub use api::ZooKeeper;

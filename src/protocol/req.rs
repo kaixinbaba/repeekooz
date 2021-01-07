@@ -13,7 +13,7 @@ pub struct RequestHeader {
 }
 
 impl RequestHeader {
-    pub fn new(xid: i32, rtype: i32) -> RequestHeader {
+    pub(crate) fn new(xid: i32, rtype: i32) -> RequestHeader {
         RequestHeader { xid, rtype }
     }
 }
@@ -37,7 +37,7 @@ pub struct ConnectRequest {
 }
 
 impl ConnectRequest {
-    pub fn new(session_timeout: i32) -> Self {
+    pub(crate) fn new(session_timeout: i32) -> Self {
         ConnectRequest {
             protocol_version: 0,
             last_zxid_seen: 0,
@@ -106,7 +106,7 @@ impl Serializer for CreateRequest {
 }
 
 impl CreateRequest {
-    pub fn new(path: &str) -> Self {
+    pub(crate) fn new(path: &str) -> Self {
         CreateRequest {
             path: String::from(path),
             data: None,
@@ -115,7 +115,7 @@ impl CreateRequest {
         }
     }
 
-    pub fn new_full(
+    pub(crate) fn new_full(
         path: String,
         data: Option<&[u8]>,
         acl: Vec<ACL>,
@@ -171,7 +171,7 @@ impl Serializer for DeleteRequest {
     }
 }
 impl DeleteRequest {
-    pub fn new(path: String, version: i32) -> Self {
+    pub(crate) fn new(path: String, version: i32) -> Self {
         DeleteRequest { path, version }
     }
 }
@@ -193,11 +193,31 @@ impl Serializer for SetDataRequest {
 }
 
 impl SetDataRequest {
-    pub fn new(path: String, data: &[u8], version: i32) -> Self {
+    pub(crate) fn new(path: String, data: &[u8], version: i32) -> Self {
         SetDataRequest {
             path,
             data: Vec::from(data),
             version,
         }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct GetDataRequest {
+    path: String,
+    watch: bool,
+}
+
+impl Serializer for GetDataRequest {
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        self.write_string(self.path.as_str(), b);
+        self.write_bool(self.watch, b);
+        Ok(())
+    }
+}
+
+impl GetDataRequest {
+    pub(crate) fn new(path: String, watch: bool) -> Self {
+        GetDataRequest { path, watch }
     }
 }

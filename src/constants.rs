@@ -20,7 +20,7 @@ pub enum WatcherType {
     Data = 2,
     Any = 3,
 }
-
+#[derive(Debug)]
 pub enum EventType {
     None = -1,
     NodeCreated = 1,
@@ -31,7 +31,7 @@ pub enum EventType {
     ChildWatchRemoved = 6,
     PersistentWatchRemoved = 7,
 }
-
+#[derive(Debug)]
 pub enum KeeperState {
     Disconnected = 0,
     SyncConnected = 3,

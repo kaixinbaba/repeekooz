@@ -253,7 +253,7 @@ impl Client {
         rh: Option<RequestHeader>,
         req: BytesMut,
         mut resp: D,
-    ) -> ZKResult<(ReplyHeader, D)>
+    ) -> ZKResult<D>
     where
         D: Deserializer,
     {
@@ -264,8 +264,14 @@ impl Client {
         let mut buf = self.read_buf().await?;
         let mut reply_header = ReplyHeader::default();
         reply_header.read(&mut buf);
+        if reply_header.err != 0 {
+            return Err(ZKError(
+                Error::from(reply_header.err as isize),
+                "occur error from server",
+            ));
+        }
         resp.read(&mut buf);
-        Ok((reply_header, resp))
+        Ok(resp)
     }
 
     pub fn wrap_len_buf(buf: BytesMut) -> BytesMut {

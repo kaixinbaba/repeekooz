@@ -6,14 +6,26 @@ use bytes::BytesMut;
 
 use crate::client::Client;
 use crate::constants::{CreateMode, Error, OpCode, IGNORE_VERSION};
-use crate::protocol::req::{CreateRequest, DeleteRequest, RequestHeader, SetDataRequest, ACL};
-use crate::protocol::resp::{CreateResponse, IgnoreResponse, SetDataResponse, Stat};
+use crate::protocol::req::{
+    CreateRequest, DeleteRequest, GetDataRequest, RequestHeader, SetDataRequest, ACL,
+};
+use crate::protocol::resp::{
+    CreateResponse, GetDataResponse, IgnoreResponse, SetDataResponse, Stat,
+};
 use crate::protocol::Serializer;
-use crate::{paths, ZKError, ZKResult};
+use crate::watcher::Watcher;
+use crate::{paths, WatchedEvent, ZKError, ZKResult};
 
 #[derive(Debug)]
 pub struct ZooKeeper {
     client: Client,
+}
+
+struct DummyWatcher;
+impl Watcher for DummyWatcher {
+    fn process(&self, event: WatchedEvent) -> ZKResult<()> {
+        Ok(())
+    }
 }
 
 impl ZooKeeper {
@@ -48,13 +60,7 @@ impl ZooKeeper {
         let request = CreateRequest::new_full(self.client.get_path(path), data, acl, create_model);
         request.write(&mut req);
         let resp = CreateResponse::default();
-        let (reply_header, resp) = self.client.submit_request(rh, req, resp).await?;
-        if reply_header.err != 0 {
-            return Err(ZKError(
-                Error::from(reply_header.err as isize),
-                "Error from server",
-            ));
-        }
+        let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.path)
     }
 
@@ -71,13 +77,7 @@ impl ZooKeeper {
         let request = DeleteRequest::new(self.client.get_path(path), version);
         request.write(&mut req);
         let resp = IgnoreResponse::default();
-        let (reply_header, _) = self.client.submit_request(rh, req, resp).await?;
-        if reply_header.err != 0 {
-            return Err(ZKError(
-                Error::from(reply_header.err as isize),
-                "Error from server",
-            ));
-        }
+        self.client.submit_request(rh, req, resp).await?;
         Ok(())
     }
 
@@ -99,13 +99,40 @@ impl ZooKeeper {
         let request = SetDataRequest::new(self.client.get_path(path), data, version);
         request.write(&mut req);
         let resp = SetDataResponse::default();
-        let (reply_header, resp) = self.client.submit_request(rh, req, resp).await?;
-        if reply_header.err != 0 {
-            return Err(ZKError(
-                Error::from(reply_header.err as isize),
-                "Error from server",
-            ));
-        }
+        let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.stat)
+    }
+
+    /// 获取目标路径数据，不需要回调
+    pub async fn get_data_without_watcher(
+        &mut self,
+        path: &str,
+        stat: Option<&mut Stat>,
+    ) -> ZKResult<Vec<u8>> {
+        self.get_data::<DummyWatcher>(path, None, stat).await
+    }
+
+    /// 获取目标路径数据，需要回调通知
+    pub async fn get_data<W: Watcher>(
+        &mut self,
+        path: &str,
+        watcher: Option<W>,
+        stat: Option<&mut Stat>,
+    ) -> ZKResult<Vec<u8>> {
+        paths::validate_path(path)?;
+        let rh = Some(RequestHeader::new(0, OpCode::GetData as i32));
+        let mut req = BytesMut::new();
+        let watch = match watcher {
+            Some(_) => true,
+            _ => false,
+        };
+        let request = GetDataRequest::new(self.client.get_path(path), watch);
+        request.write(&mut req);
+        let resp = GetDataResponse::default();
+        let resp = self.client.submit_request(rh, req, resp).await?;
+        if let Some(s) = stat {
+            *s = resp.stat;
+        }
+        Ok(resp.data)
     }
 }

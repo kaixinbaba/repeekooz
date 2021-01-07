@@ -1,16 +1,17 @@
 #[macro_use]
 extern crate log;
 
-use buruma::api::ZooKeeper;
 use buruma::constants::CreateMode;
 use buruma::protocol::req::ACL;
+use buruma::protocol::resp::Stat;
+use buruma::{WatchedEvent, Watcher, ZKResult, ZooKeeper};
 
 mod common;
 
 #[tokio::test]
 async fn basic() {
     let basic_path = "/buruma";
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", 5000).await.unwrap();
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", 60000).await.unwrap();
 
     // 以防万一先将该节点删除
     zk.delete(basic_path).await;
@@ -26,4 +27,27 @@ async fn basic() {
     info!("{:?}", stat);
     // 删除节点
     zk.delete(basic_path).await.unwrap();
+}
+
+struct WatcherDemo;
+
+impl Watcher for WatcherDemo {
+    fn process(&self, event: WatchedEvent) -> ZKResult<()> {
+        info!("{:?}", event);
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn get_data() {
+    let basic_path = "/xjj";
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", 10000).await.unwrap();
+
+    let mut stat = Stat::default();
+    let x = zk
+        .get_data_without_watcher(basic_path, Some(&mut stat))
+        .await
+        .unwrap();
+    info!("{:?}", String::from_utf8(x));
+    info!("{:?}", stat);
 }

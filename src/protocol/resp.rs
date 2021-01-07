@@ -106,3 +106,19 @@ impl Deserializer for SetDataResponse {
         Ok(())
     }
 }
+
+#[derive(Debug, Default)]
+pub struct GetDataResponse {
+    pub data: Vec<u8>,
+    pub stat: Stat,
+}
+
+impl Deserializer for GetDataResponse {
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        self.data = self.read_slice_unchecked(b);
+        let mut stat = Stat::default();
+        stat.read(b)?;
+        self.stat = stat;
+        Ok(())
+    }
+}
