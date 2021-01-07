@@ -14,18 +14,17 @@ use crate::protocol::{Deserializer, Serializer};
 use crate::{ZKError, ZKResult};
 
 struct SenderTask {
-    rx: Receiver<ReqPacket>,
+    packet_rx: Receiver<ReqPacket>,
     writer: WriteHalf<TcpStream>,
 }
 
 impl SenderTask {
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
         loop {
-            let packet = match self.rx.recv().await {
+            let packet = match self.packet_rx.recv().await {
                 Some(packet) if packet.ptype != DEATH_PTYPE => packet,
                 Some(_death) => {
                     info!("Received DEATH REQ quit!");
-                    println!("Received DEATH REQ quit!");
                     return Ok(());
                 }
                 None => continue,
@@ -37,6 +36,41 @@ impl SenderTask {
             buf.extend(packet.req);
             self.writer.write_buf(&mut Client::wrap_len_buf(buf)).await;
             self.writer.flush().await;
+        }
+    }
+}
+
+struct ReceiverTask {
+    buf_tx: Sender<(ReplyHeader, BytesMut)>,
+    reader: ReadHalf<TcpStream>,
+    is_connected: bool,
+}
+
+impl ReceiverTask {
+    pub(self) async fn run(&mut self) -> Result<(), io::Error> {
+        loop {
+            // FIXME 1024 够吗
+            let mut buf = BytesMut::with_capacity(1024);
+            loop {
+                let buf_size = match self.reader.read_buf(&mut buf).await {
+                    Ok(buf_size) => buf_size,
+                    _ => break,
+                };
+                if buf_size > 0 {
+                    // skip first size
+                    buf.get_i32();
+                    break;
+                }
+            }
+            let mut reply_header = ReplyHeader::default();
+            if self.is_connected {
+                reply_header.read(&mut buf);
+                self.buf_tx.send((reply_header, buf)).await;
+            } else {
+                // connect response 没有 ReplyHeader
+                self.buf_tx.send((reply_header, buf)).await;
+                self.is_connected = true;
+            }
         }
     }
 }
@@ -136,8 +170,8 @@ impl HostProvider {
 pub(crate) struct Client {
     host_provider: HostProvider,
     session_timeout: i32,
-    reader: ReadHalf<TcpStream>,
     packet_tx: Sender<ReqPacket>,
+    buf_rx: Receiver<(ReplyHeader, BytesMut)>,
     event_tx: Sender<String>,
     state: States,
     session_id: i64,
@@ -167,27 +201,38 @@ impl Client {
 
         let (reader, writer) = io::split(socket);
         // start send thread
-        let (packet_tx, packet_rx): (Sender<ReqPacket>, Receiver<ReqPacket>) = mpsc::channel(17120);
-
-        let mut sender_task = SenderTask {
-            rx: packet_rx,
-            writer,
-        };
+        let (packet_tx, packet_rx): (Sender<ReqPacket>, Receiver<ReqPacket>) = mpsc::channel(2017);
+        let mut sender_task = SenderTask { packet_rx, writer };
         tokio::spawn(async move {
             sender_task.run().await;
             Ok::<_, io::Error>(())
         });
 
+        // start receive thread
+        let (buf_tx, buf_rx): (
+            Sender<(ReplyHeader, BytesMut)>,
+            Receiver<(ReplyHeader, BytesMut)>,
+        ) = mpsc::channel(1002);
+        let mut receiver_task = ReceiverTask {
+            buf_tx,
+            reader,
+            is_connected: false,
+        };
+        tokio::spawn(async move {
+            receiver_task.run().await;
+            Ok::<_, io::Error>(())
+        });
+
         // start event thread
-        let (event_tx, event_rx) = mpsc::channel(17120);
+        let (event_tx, event_rx) = mpsc::channel(2017);
         let event_task = EventTask { rx: event_rx };
         thread::spawn(move || event_task.run());
 
         let mut client = Client {
             host_provider,
             session_timeout,
-            reader,
             packet_tx,
+            buf_rx,
             event_tx,
             state: States::NotConnected,
             session_id: 0,
@@ -207,19 +252,18 @@ impl Client {
     }
 
     async fn read_buf(&mut self) -> ZKResult<BytesMut> {
-        // FIXME 1024 够吗
-        let mut buf = BytesMut::with_capacity(1024);
-        loop {
-            let buf_size = match self.reader.read_buf(&mut buf).await {
-                Ok(buf_size) => buf_size,
-                _ => return Err(ZKError(Error::ReadSocketError, "read socket error")),
-            };
-            if buf_size > 0 {
-                // skip first size
-                buf.get_i32();
-                break;
+        let buf = match self.buf_rx.recv().await {
+            Some((reply_header, buf)) => {
+                if reply_header.err != 0 {
+                    return Err(ZKError(
+                        Error::from(reply_header.err as isize),
+                        "occur error from server",
+                    ));
+                }
+                buf
             }
-        }
+            _ => return Err(ZKError(Error::ReadSocketError, "occur error from server")),
+        };
         Ok(buf)
     }
 
@@ -241,6 +285,7 @@ impl Client {
         self.write_buf(None, req).await?;
 
         let mut buf = self.read_buf().await?;
+
         let mut response = ConnectResponse::default();
         response.read(&mut buf)?;
         self.session_id = response.session_id;
@@ -262,19 +307,11 @@ impl Client {
         }
         self.write_buf(rh, req).await?;
         let mut buf = self.read_buf().await?;
-        let mut reply_header = ReplyHeader::default();
-        reply_header.read(&mut buf);
-        if reply_header.err != 0 {
-            return Err(ZKError(
-                Error::from(reply_header.err as isize),
-                "occur error from server",
-            ));
-        }
         resp.read(&mut buf);
         Ok(resp)
     }
 
-    pub fn wrap_len_buf(buf: BytesMut) -> BytesMut {
+    pub(crate) fn wrap_len_buf(buf: BytesMut) -> BytesMut {
         let len = buf.len();
         let mut wrap_buf = BytesMut::with_capacity(4 + len);
         wrap_buf.put_i32(len as i32);

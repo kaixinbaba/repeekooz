@@ -126,6 +126,14 @@ impl CreateMode {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub enum XidType {
+    Notification = -1,
+    Ping = -2,
+    AuthPacket = -4,
+    SetWatches = -8,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Error {
     // customer error
     ReadSocketError = 100,

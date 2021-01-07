@@ -25,6 +25,11 @@ async fn basic() {
     assert_eq!(path, basic_path);
     let stat = zk.set_data(basic_path, "buruma".as_bytes()).await.unwrap();
     info!("{:?}", stat);
+    let get_data_result = zk.get_data_without_watcher(basic_path, None).await.unwrap();
+    assert_eq!(
+        "buruma".to_string(),
+        String::from_utf8(get_data_result).unwrap()
+    );
     // 删除节点
     zk.delete(basic_path).await.unwrap();
 }
@@ -39,6 +44,7 @@ impl Watcher for WatcherDemo {
 }
 
 #[tokio::test]
+#[ignore]
 async fn get_data() {
     let basic_path = "/xjj";
     let mut zk = ZooKeeper::new("127.0.0.1:2181", 10000).await.unwrap();
