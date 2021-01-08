@@ -52,19 +52,14 @@ impl Watcher for WatcherDemo {
 #[ignore]
 async fn get_data() {
     let basic_path = "/xjj";
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", 100000).await.unwrap();
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", 30000).await.unwrap();
 
-    for i in 0..5 {
-        if i == 0 {
-            let x = zk
-                .get_data(basic_path, Some(WatcherDemo), None)
-                .await
-                .unwrap();
-            info!("first {:?}", String::from_utf8(x));
-        } else {
-            let x = zk.get_data_without_watcher(basic_path, None).await.unwrap();
-            info!("from 1 {:?}", String::from_utf8(x));
-        }
-        thread::sleep(Duration::from_secs(2));
-    }
+    let x = zk
+        .get_data(basic_path, Some(WatcherDemo), None)
+        .await
+        .unwrap();
+    info!("first {:?}", String::from_utf8(x));
+    thread::sleep(Duration::from_secs(20));
+    let x = zk.get_data_without_watcher(basic_path, None).await.unwrap();
+    info!("from 1 {:?}", String::from_utf8(x));
 }
