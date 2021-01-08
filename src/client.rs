@@ -1,6 +1,4 @@
-
 use std::sync::Arc;
-
 
 use bytes::{Buf, BufMut, BytesMut};
 use tokio::io::{self, ReadHalf, WriteHalf};
@@ -36,7 +34,9 @@ impl SenderTask {
             if let Some(rh) = packet.rh {
                 rh.write(&mut buf);
             }
-            buf.extend(packet.req);
+            if let Some(req) = packet.req {
+                buf.extend(req);
+            }
             self.writer.write_buf(&mut Client::wrap_len_buf(buf)).await;
             self.writer.flush().await;
         }
@@ -328,7 +328,7 @@ impl Client {
     }
 
     async fn write_buf(&mut self, rh: Option<RequestHeader>, req: BytesMut) -> ZKResult<()> {
-        let packet = ReqPacket::new(rh, req);
+        let packet = ReqPacket::new(rh, Some(req));
         self.packet_tx.send(packet).await;
         Ok(())
     }
