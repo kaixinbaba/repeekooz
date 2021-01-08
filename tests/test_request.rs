@@ -5,6 +5,8 @@ use buruma::constants::CreateMode;
 use buruma::protocol::req::ACL;
 use buruma::protocol::resp::Stat;
 use buruma::{WatchedEvent, Watcher, ZKResult, ZooKeeper};
+use std::thread;
+use tokio::time::Duration;
 
 mod common;
 
@@ -52,9 +54,12 @@ async fn get_data() {
 
     let mut stat = Stat::default();
     let x = zk
-        .get_data_without_watcher(basic_path, Some(&mut stat))
+        .get_data(basic_path, Some(WatcherDemo), Some(&mut stat))
         .await
         .unwrap();
     info!("{:?}", String::from_utf8(x));
+    thread::sleep(Duration::from_secs(5));
     info!("{:?}", stat);
+    thread::sleep(Duration::from_secs(5));
+    info!("END");
 }
