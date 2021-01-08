@@ -2,7 +2,7 @@ use bytes::BytesMut;
 
 use crate::protocol::Deserializer;
 use crate::ZKResult;
-use std::os::macos::raw::stat;
+
 
 #[derive(Debug, Default)]
 pub struct ReplyHeader {

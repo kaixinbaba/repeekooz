@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
@@ -40,7 +40,7 @@ impl MyTrait for MyTraitImpl {
         0
     }
 
-    fn my_eq(&self, other: &dyn MyTrait) -> bool {
+    fn my_eq(&self, _other: &dyn MyTrait) -> bool {
         true
     }
     fn my_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

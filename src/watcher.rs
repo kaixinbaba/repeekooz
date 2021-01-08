@@ -1,11 +1,11 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::fmt::Debug;
 use std::sync::Mutex;
 
 use crate::constants::{EventType, KeeperState};
 use crate::protocol::resp::WatcherEvent;
 use crate::ZKResult;
-use std::hash::{Hash, Hasher};
+
 
 #[derive(Debug)]
 pub struct WatchedEvent {

@@ -7,7 +7,7 @@ use tokio::time::Duration;
 
 use buruma::constants::CreateMode;
 use buruma::protocol::req::ACL;
-use buruma::protocol::resp::Stat;
+
 use buruma::{WatchedEvent, Watcher, ZKResult, ZooKeeper};
 
 mod common;

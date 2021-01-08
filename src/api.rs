@@ -5,7 +5,7 @@
 use bytes::BytesMut;
 
 use crate::client::Client;
-use crate::constants::{CreateMode, Error, OpCode, IGNORE_VERSION};
+use crate::constants::{CreateMode, OpCode, IGNORE_VERSION};
 use crate::protocol::req::{
     CreateRequest, DeleteRequest, GetDataRequest, RequestHeader, SetDataRequest, ACL,
 };
@@ -14,7 +14,7 @@ use crate::protocol::resp::{
 };
 use crate::protocol::Serializer;
 use crate::watcher::Watcher;
-use crate::{paths, WatchedEvent, ZKError, ZKResult};
+use crate::{paths, WatchedEvent, ZKResult};
 
 #[derive(Debug)]
 pub struct ZooKeeper {
