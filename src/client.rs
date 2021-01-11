@@ -8,15 +8,20 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::constants::{Error, States, XidType};
+use crate::metric::Metrics;
 use crate::protocol::req::{ConnectRequest, ReqPacket, RequestHeader, DEATH_PTYPE};
 use crate::protocol::resp::{ConnectResponse, ReplyHeader, WatcherEvent};
 use crate::protocol::{Deserializer, Serializer};
 use crate::watcher::WatcherManager;
 use crate::{WatchedEvent, Watcher, ZKError, ZKResult};
+use chrono::prelude::*;
+
+extern crate chrono;
 
 struct SenderTask {
     packet_rx: Receiver<ReqPacket>,
     writer: WriteHalf<TcpStream>,
+    metrics: Arc<Metrics>,
 }
 
 impl SenderTask {
@@ -127,6 +132,21 @@ impl EventTask {
     }
 }
 
+struct PingTask {
+    packet_tx: Arc<Sender<ReqPacket>>,
+    metrics: Arc<Metrics>,
+}
+
+impl PingTask {
+    fn create_ping_request(&self) -> ReqPacket {
+        ReqPacket::new(Some(RequestHeader::new(XidType::Ping as i32, 0)), None)
+    }
+
+    pub(self) async fn run(&mut self) -> Result<(), io::Error> {
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 struct HostProvider {
     server_list: Vec<String>,
@@ -212,7 +232,7 @@ impl HostProvider {
 pub(crate) struct Client {
     host_provider: HostProvider,
     session_timeout: i32,
-    packet_tx: Sender<ReqPacket>,
+    packet_tx: Arc<Sender<ReqPacket>>,
     buf_rx: Receiver<(ReplyHeader, BytesMut)>,
     state: States,
     session_id: i64,
@@ -251,9 +271,14 @@ impl Client {
         };
 
         let (reader, writer) = io::split(socket);
+        let metrics = Arc::new(Metrics::default());
         // start send thread
         let (packet_tx, packet_rx): (Sender<ReqPacket>, Receiver<ReqPacket>) = mpsc::channel(2017);
-        let mut sender_task = SenderTask { packet_rx, writer };
+        let mut sender_task = SenderTask {
+            packet_rx,
+            writer,
+            metrics: metrics.clone(),
+        };
         tokio::spawn(async move {
             sender_task.run().await;
             Ok::<_, io::Error>(())
@@ -288,10 +313,21 @@ impl Client {
             Ok::<_, io::Error>(())
         });
 
+        let packet_tx = Arc::new(packet_tx);
+        // start ping task
+        let mut ping_task = PingTask {
+            packet_tx: packet_tx.clone(),
+            metrics: metrics.clone(),
+        };
+        tokio::spawn(async move {
+            ping_task.run().await;
+            Ok::<_, io::Error>(())
+        });
+
         let mut client = Client {
             host_provider,
             session_timeout,
-            packet_tx,
+            packet_tx: packet_tx.clone(),
             buf_rx,
             state: States::NotConnected,
             session_id: 0,

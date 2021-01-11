@@ -42,6 +42,7 @@ use crate::constants::Error;
 pub mod api;
 mod client;
 pub mod constants;
+mod metric;
 mod paths;
 pub mod protocol;
 mod watcher;
