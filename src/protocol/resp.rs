@@ -61,17 +61,17 @@ impl Deserializer for IgnoreResponse {
 }
 
 /// ZK 节点统计数据
-/// `czxid`： 创建节点时 zxid
-/// `mzxid`： 修改节点时 zxid
-/// `ctime`： 创建时间戳
-/// `mtime`： 修改时间戳
-/// `version`： 节点数据修改次数
-/// `cversion`： 子节点列表修改次数
-/// `aversion`： 节点 ACL 数据修改次数
-/// `ephemeral_owner`：若当前节点是临时节点，该字段为对应客户端的 session_id，否则为 0
-/// `data_length`： 数据的长度
-/// `num_children`：子节点（不含孙子节点）数量
-/// `pzxid`：
+/// - `czxid`： 创建节点时 zxid
+/// - `mzxid`： 修改节点时 zxid
+/// - `ctime`： 创建时间戳
+/// - `mtime`： 修改时间戳
+/// - `version`： 节点数据修改次数
+/// - `cversion`： 子节点列表修改次数
+/// - `aversion`： 节点 ACL 数据修改次数
+/// - `ephemeral_owner`：若当前节点是临时节点，该字段为对应客户端的 session_id，否则为 0
+/// - `data_length`： 数据的长度
+/// - `num_children`：子节点（不含孙子节点）数量
+/// - `pzxid`：
 #[derive(Debug, Default)]
 pub struct Stat {
     pub czxid: i64,

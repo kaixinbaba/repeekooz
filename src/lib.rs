@@ -1,4 +1,4 @@
-//! **buruma** 是一个使用 Rust [ZooKeeper](https://zookeeper.apache.org/) 异步客户端，基本实现了 Java 版官方
+//! **buruma** 是一个使用纯 Rust 编写的 [ZooKeeper](https://zookeeper.apache.org/) 异步客户端，基本实现了 Java 版官方
 //! 客户端的功能
 //!
 //! # 引入依赖
