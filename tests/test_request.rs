@@ -9,6 +9,7 @@ use buruma::constants::CreateMode;
 use buruma::protocol::req::ACL;
 
 use buruma::{WatchedEvent, Watcher, ZKResult, ZooKeeper};
+use futures_timer::Delay;
 
 mod common;
 
@@ -16,6 +17,7 @@ mod common;
 async fn basic() {
     let basic_path = "/buruma";
     let mut zk = ZooKeeper::new("127.0.0.1:2181", 6000).await.unwrap();
+    Delay::new(Duration::from_secs(1)).await;
     // 以防万一先将该节点删除
     zk.delete(basic_path).await;
 
@@ -26,13 +28,16 @@ async fn basic() {
         .await
         .unwrap();
     assert_eq!(path, basic_path);
+    Delay::new(Duration::from_secs(1)).await;
     let stat = zk.set_data(basic_path, "buruma".as_bytes()).await.unwrap();
     info!("{:?}", stat);
+    Delay::new(Duration::from_secs(1)).await;
     let get_data_result = zk.get_data_without_watcher(basic_path, None).await.unwrap();
     assert_eq!(
         "buruma".to_string(),
         String::from_utf8(get_data_result).unwrap()
     );
+    Delay::new(Duration::from_secs(1)).await;
     // 删除节点
     zk.delete(basic_path).await.unwrap();
 }
@@ -51,14 +56,14 @@ impl Watcher for WatcherDemo {
 #[ignore]
 async fn get_data() {
     let basic_path = "/xjj";
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", 30000).await.unwrap();
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", 60000).await.unwrap();
 
     let x = zk
         .get_data(basic_path, Some(WatcherDemo), None)
         .await
         .unwrap();
     info!("first {:?}", String::from_utf8(x));
-    thread::sleep(Duration::from_secs(30));
+    Delay::new(Duration::from_secs(10)).await;
     let x = zk.get_data_without_watcher(basic_path, None).await.unwrap();
     info!("from 1 {:?}", String::from_utf8(x));
 }

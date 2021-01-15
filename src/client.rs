@@ -9,6 +9,7 @@ use tokio::net::TcpStream;
 use tokio::prelude::*;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::time::Duration;
 
 use crate::constants::{Error, OpCode, States, XidType};
 use crate::metric::Metrics;
@@ -17,8 +18,7 @@ use crate::protocol::resp::{ConnectResponse, ReplyHeader, WatcherEvent};
 use crate::protocol::{Deserializer, Serializer};
 use crate::watcher::WatcherManager;
 use crate::{WatchedEvent, Watcher, ZKError, ZKResult};
-use std::thread;
-use tokio::time::Duration;
+use futures_timer::Delay;
 
 struct SenderTask {
     packet_rx: Receiver<ReqPacket>,
@@ -69,8 +69,9 @@ impl ReceiverTask {
             };
             if buf_size > 0 {
                 // skip first size
-                buf.get_i32();
-                break;
+                let len = buf.get_i32();
+                let bytes_mut = buf.split_to(len as usize);
+                return bytes_mut;
             }
         }
         buf
@@ -156,21 +157,22 @@ impl PingTask {
 
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
         let max_idle = 10000;
-        tokio::time::sleep(Duration::from_secs(1));
-        // loop {
-        let idle_time =
-            Local::now().timestamp_millis() - self.metrics.lock().unwrap().last_send_timestamp;
-        let next_ping = if idle_time > 1000 {
-            self.read_timeout / 2 - idle_time - 1000
-        } else {
-            self.read_timeout / 2 - idle_time
-        };
-        if next_ping <= 0 || idle_time > max_idle {
-            // send_ping
-            self.packet_tx.send(self.create_ping_request()).await;
-            self.metrics.lock().unwrap().send_done();
+        loop {
+            let idle_time =
+                Local::now().timestamp_millis() - self.metrics.lock().unwrap().last_send_timestamp;
+            let next_ping = if idle_time > 1000 {
+                self.read_timeout / 2 - idle_time - 1000
+            } else {
+                self.read_timeout / 2 - idle_time
+            };
+            if next_ping <= 0 || idle_time > max_idle {
+                // send_ping
+                self.packet_tx.send(self.create_ping_request()).await;
+                self.metrics.lock().unwrap().send_done();
+            } else {
+                Delay::new(Duration::from_millis(self.read_timeout as u64)).await;
+            }
         }
-        // }
         Ok(())
     }
 }
@@ -362,6 +364,7 @@ impl Client {
             metrics: metrics.clone(),
             read_timeout: (session_timeout / 3 * 2) as i64,
         };
+
         tokio::spawn(async move {
             ping_task.run().await;
             Ok::<_, io::Error>(())
