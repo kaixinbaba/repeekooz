@@ -1,3 +1,10 @@
+/// ZooKeeper 定义的 5 种权限
+/// `Read`： 节点可读
+/// `Write`： 节点可写
+/// `Create`： 可创建子节点
+/// `Delete`： 可删除子节点
+/// `ACL`： 可读写 ACL 数据
+/// `All`： 所有以上权限
 pub enum Perms {
     Read = 1 << 0,
     Write = 1 << 1,
@@ -11,15 +18,25 @@ pub enum Perms {
         | Perms::ACL as isize,
 }
 
+/// world scheme
 pub const WORLD: &str = "world";
+/// ip scheme
+pub const IP: &str = "ip";
+/// digest scheme
+pub const DIGEST: &str = "digest";
+/// super scheme
+pub const SUPER: &str = "super";
+/// World scheme 固定的 id
 pub const ANYONE: &str = "anyone";
+/// 忽略版本号，一般用于 set_data 或 delete
 pub const IGNORE_VERSION: i32 = -1;
 
-pub enum WatcherType {
+pub(crate) enum WatcherType {
     Children = 1,
     Data = 2,
     Any = 3,
 }
+/// 回调的事件类型
 #[derive(Debug)]
 pub enum EventType {
     None = -1,

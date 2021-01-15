@@ -2,12 +2,13 @@ use std::hash::Hasher;
 
 use bytes::BytesMut;
 
-use crate::constants::{CreateMode, Perms, ANYONE, WORLD};
+use crate::constants::{CreateMode, Perms, ANYONE, DIGEST, IP, SUPER, WORLD};
 use crate::protocol::Serializer;
 use crate::ZKResult;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Default)]
-pub struct RequestHeader {
+pub(crate) struct RequestHeader {
     xid: i32,
     rtype: i32,
 }
@@ -27,17 +28,17 @@ impl Serializer for RequestHeader {
 }
 
 #[derive(Debug, Default)]
-pub struct ConnectRequest {
+pub(crate) struct ConnectRequest {
     protocol_version: i32,
     last_zxid_seen: i64,
-    time_out: i32,
+    time_out: u32,
     session_id: i64,
     passwd: Option<Vec<u8>>,
     read_only: bool,
 }
 
 impl ConnectRequest {
-    pub(crate) fn new(session_timeout: i32) -> Self {
+    pub(crate) fn new(session_timeout: u32) -> Self {
         ConnectRequest {
             protocol_version: 0,
             last_zxid_seen: 0,
@@ -53,42 +54,59 @@ impl Serializer for ConnectRequest {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
         self.write_i32(self.protocol_version, b);
         self.write_i64(self.last_zxid_seen, b);
-        self.write_i32(self.time_out, b);
+        self.write_u32(self.time_out, b);
         self.write_i64(self.session_id, b);
         self.write_slice_option(self.passwd.clone(), b);
         self.write_bool(self.read_only, b);
         Ok(())
     }
 }
+/// ZK 内置的 4 种 scheme
+#[derive(Debug, Default)]
+pub enum Scheme {
+    World,
+    IP,
+    Digest,
+    Super,
+}
 
+/// ZooKeeper 权限对象
 #[derive(Debug, Default)]
 pub struct ACL {
-    pub perms: i32,
-    pub scheme: String,
+    pub perms: u32,
+    pub scheme: Scheme,
     pub id: String,
 }
 
 impl Serializer for ACL {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
-        self.write_i32(self.perms, b);
-        self.write_string(self.scheme.as_str(), b);
+        self.write_u32(self.perms, b);
+        let scheme = match self.scheme {
+            Scheme::World => WORLD,
+            Scheme::IP => IP,
+            Scheme::Digest => DIGEST,
+            Scheme::Super => SUPER,
+        };
+        self.write_string(scheme, b);
         self.write_string(self.id.as_str(), b);
         Ok(())
     }
 }
 
 impl ACL {
+    /// world 权限固定写法
     pub fn world_acl() -> Vec<ACL> {
+        // TODO 缓存
         vec![ACL {
-            perms: Perms::All as i32,
-            scheme: WORLD.to_string(),
+            perms: Perms::All as u32,
+            scheme: Scheme::World,
             id: ANYONE.to_string(),
         }]
     }
 }
 
 #[derive(Debug, Default)]
-pub struct CreateRequest {
+pub(crate) struct CreateRequest {
     path: String,
     data: Option<Vec<u8>>,
     acl: Vec<ACL>,
@@ -134,10 +152,10 @@ impl CreateRequest {
     }
 }
 
-pub const DEATH_PTYPE: i8 = -1;
+pub(crate) const DEATH_PTYPE: i8 = -1;
 
 #[derive(Debug)]
-pub struct ReqPacket {
+pub(crate) struct ReqPacket {
     pub ptype: i8,
     pub rh: Option<RequestHeader>,
     pub req: Option<BytesMut>,
@@ -158,7 +176,7 @@ impl ReqPacket {
 }
 
 #[derive(Debug, Default)]
-pub struct DeleteRequest {
+pub(crate) struct DeleteRequest {
     path: String,
     version: i32,
 }
@@ -177,7 +195,7 @@ impl DeleteRequest {
 }
 
 #[derive(Debug, Default)]
-pub struct SetDataRequest {
+pub(crate) struct SetDataRequest {
     path: String,
     data: Vec<u8>,
     version: i32,
@@ -203,7 +221,7 @@ impl SetDataRequest {
 }
 
 #[derive(Debug, Default)]
-pub struct GetDataRequest {
+pub(crate) struct GetDataRequest {
     path: String,
     watch: bool,
 }

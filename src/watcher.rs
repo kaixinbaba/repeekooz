@@ -1,4 +1,4 @@
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Mutex;
 
@@ -6,7 +6,10 @@ use crate::constants::{EventType, KeeperState};
 use crate::protocol::resp::WatcherEvent;
 use crate::ZKResult;
 
-
+/// ZooKeeper 回调通知对象
+/// `keep_state`： 服务端的状态，详细可见 [`KeeperState`]
+/// `event_type`： 事件类型，详细可见 [`EventType`]
+/// `path`： 触发事件的节点路径
 #[derive(Debug)]
 pub struct WatchedEvent {
     pub keep_state: KeeperState,
@@ -24,6 +27,7 @@ impl From<WatcherEvent> for WatchedEvent {
     }
 }
 
+/// 事件回调 trait，实现该 trait 即可自定义处理 ZooKeeper 回调通知
 pub trait Watcher: Debug + Send {
     fn process(&self, event: &WatchedEvent) -> ZKResult<()>;
 }

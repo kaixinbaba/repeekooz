@@ -12,6 +12,10 @@ pub trait Serializer: Send {
         b.put_i32(i);
     }
 
+    fn write_u32(&self, i: u32, b: &mut BytesMut) {
+        b.put_u32(i);
+    }
+
     fn write_i64(&self, i: i64, b: &mut BytesMut) {
         b.put_i64(i);
     }
@@ -41,7 +45,10 @@ pub trait Serializer: Send {
         b.put_u32(i as u32);
     }
 
-    fn write_vec<S>(&self, v: &Vec<S>, b: &mut BytesMut) where S: Serializer {
+    fn write_vec<S>(&self, v: &Vec<S>, b: &mut BytesMut)
+    where
+        S: Serializer,
+    {
         if v.is_empty() {
             self.write_i32(-1, b);
             return;
@@ -88,4 +95,3 @@ pub trait Deserializer {
         v
     }
 }
-

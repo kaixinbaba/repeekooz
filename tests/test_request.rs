@@ -16,7 +16,9 @@ mod common;
 #[tokio::test]
 async fn basic() {
     let basic_path = "/buruma";
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", 6000).await.unwrap();
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(6))
+        .await
+        .unwrap();
     // 以防万一先将该节点删除
     zk.delete(basic_path).await;
 
@@ -52,7 +54,9 @@ impl Watcher for WatcherDemo {
 #[ignore]
 async fn get_data() {
     let basic_path = "/xjj";
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", 60000).await.unwrap();
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+        .await
+        .unwrap();
 
     let x = zk
         .get_data(basic_path, Some(WatcherDemo), None)

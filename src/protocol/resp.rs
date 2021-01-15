@@ -3,9 +3,8 @@ use bytes::BytesMut;
 use crate::protocol::Deserializer;
 use crate::ZKResult;
 
-
 #[derive(Debug, Default)]
-pub struct ReplyHeader {
+pub(crate) struct ReplyHeader {
     pub xid: i32,
     pub zxid: i64,
     pub err: i32,
@@ -21,7 +20,7 @@ impl Deserializer for ReplyHeader {
 }
 
 #[derive(Debug, Default)]
-pub struct ConnectResponse {
+pub(crate) struct ConnectResponse {
     protocol_version: i32,
     time_out: i32,
     pub session_id: i64,
@@ -41,7 +40,7 @@ impl Deserializer for ConnectResponse {
 }
 
 #[derive(Debug, Default)]
-pub struct CreateResponse {
+pub(crate) struct CreateResponse {
     pub path: String,
 }
 
@@ -53,7 +52,7 @@ impl Deserializer for CreateResponse {
 }
 
 #[derive(Debug, Default)]
-pub struct IgnoreResponse {}
+pub(crate) struct IgnoreResponse {}
 
 impl Deserializer for IgnoreResponse {
     fn read(&mut self, _b: &mut BytesMut) -> ZKResult<()> {
@@ -61,6 +60,18 @@ impl Deserializer for IgnoreResponse {
     }
 }
 
+/// ZK 节点统计数据
+/// `czxid`： 创建节点时 zxid
+/// `mzxid`： 修改节点时 zxid
+/// `ctime`： 创建时间戳
+/// `mtime`： 修改时间戳
+/// `version`： 节点数据修改次数
+/// `cversion`： 子节点列表修改次数
+/// `aversion`： 节点 ACL 数据修改次数
+/// `ephemeral_owner`：若当前节点是临时节点，该字段为对应客户端的 session_id，否则为 0
+/// `data_length`： 数据的长度
+/// `num_children`：子节点（不含孙子节点）数量
+/// `pzxid`：
 #[derive(Debug, Default)]
 pub struct Stat {
     pub czxid: i64,
@@ -94,7 +105,7 @@ impl Deserializer for Stat {
 }
 
 #[derive(Debug, Default)]
-pub struct SetDataResponse {
+pub(crate) struct SetDataResponse {
     pub stat: Stat,
 }
 
@@ -108,7 +119,7 @@ impl Deserializer for SetDataResponse {
 }
 
 #[derive(Debug, Default)]
-pub struct GetDataResponse {
+pub(crate) struct GetDataResponse {
     pub data: Vec<u8>,
     pub stat: Stat,
 }
@@ -124,7 +135,7 @@ impl Deserializer for GetDataResponse {
 }
 
 #[derive(Debug, Default)]
-pub struct WatcherEvent {
+pub(crate) struct WatcherEvent {
     pub keep_state: i32,
     pub event_type: i32,
     pub path: String,

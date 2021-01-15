@@ -261,7 +261,7 @@ impl HostProvider {
 #[derive(Debug)]
 pub(crate) struct Client {
     host_provider: HostProvider,
-    session_timeout: i32,
+    session_timeout: u32,
     packet_tx: Sender<ReqPacket>,
     buf_rx: Receiver<(ReplyHeader, BytesMut)>,
     state: States,
@@ -293,7 +293,7 @@ impl Client {
         path
     }
 
-    pub(crate) async fn new(connect_string: &str, session_timeout: i32) -> ZKResult<Client> {
+    pub(crate) async fn new(connect_string: &str, session_timeout: u32) -> ZKResult<Client> {
         let (mut host_provider, chroot) = HostProvider::new(connect_string)?;
         let socket = match TcpStream::connect(host_provider.pick_host()).await {
             Ok(socket) => socket,
@@ -372,7 +372,7 @@ impl Client {
         Ok(client)
     }
 
-    fn create_connect_request(&self, session_timeout: i32) -> ZKResult<BytesMut> {
+    fn create_connect_request(&self, session_timeout: u32) -> ZKResult<BytesMut> {
         let mut buf = BytesMut::new();
         let connect_request = ConnectRequest::new(session_timeout);
         connect_request.write(&mut buf);
@@ -401,7 +401,7 @@ impl Client {
         Ok(())
     }
 
-    async fn start_connect(&mut self, session_timeout: i32) -> ZKResult<()> {
+    async fn start_connect(&mut self, session_timeout: u32) -> ZKResult<()> {
         if self.state.is_connected() {
             return Ok(());
         }
