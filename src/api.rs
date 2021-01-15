@@ -67,7 +67,8 @@ impl ZooKeeper {
 
     /// 删除目标路径的节点数据
     pub async fn delete(&mut self, path: &str) -> ZKResult<()> {
-        self.delete_with_version(path, IGNORE_VERSION).await
+        self.delete_with_version(path, IGNORE_VERSION).await?;
+        Ok(())
     }
 
     /// 删除目标路径的节点数据携带版本条件，满足版本号才能删除

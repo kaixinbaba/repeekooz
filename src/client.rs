@@ -1,27 +1,29 @@
-use std::sync::Arc;
+extern crate chrono;
+
+use std::sync::{Arc, Mutex};
 
 use bytes::{Buf, BufMut, BytesMut};
+use chrono::prelude::*;
 use tokio::io::{self, ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio::prelude::*;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::constants::{Error, States, XidType};
+use crate::constants::{Error, OpCode, States, XidType};
 use crate::metric::Metrics;
 use crate::protocol::req::{ConnectRequest, ReqPacket, RequestHeader, DEATH_PTYPE};
 use crate::protocol::resp::{ConnectResponse, ReplyHeader, WatcherEvent};
 use crate::protocol::{Deserializer, Serializer};
 use crate::watcher::WatcherManager;
 use crate::{WatchedEvent, Watcher, ZKError, ZKResult};
-use chrono::prelude::*;
-
-extern crate chrono;
+use std::thread;
+use tokio::time::Duration;
 
 struct SenderTask {
     packet_rx: Receiver<ReqPacket>,
     writer: WriteHalf<TcpStream>,
-    metrics: Arc<Metrics>,
+    metrics: Arc<Mutex<Metrics>>,
 }
 
 impl SenderTask {
@@ -83,10 +85,13 @@ impl ReceiverTask {
                 server_event.read(&mut buf);
                 self.event_tx.send(WatchedEvent::from(server_event)).await;
             }
-            XidType::Ping => {}
+            XidType::Ping => {
+                info!("Received Ping from server");
+            }
             XidType::AuthPacket => {}
             XidType::SetWatches => {}
             XidType::Response => {
+                info!("Received Response from server");
                 self.buf_tx.send((reply_header, buf)).await;
             }
         }
@@ -133,16 +138,39 @@ impl EventTask {
 }
 
 struct PingTask {
-    packet_tx: Arc<Sender<ReqPacket>>,
-    metrics: Arc<Metrics>,
+    packet_tx: Sender<ReqPacket>,
+    metrics: Arc<Mutex<Metrics>>,
+    read_timeout: i64,
 }
 
 impl PingTask {
     fn create_ping_request(&self) -> ReqPacket {
-        ReqPacket::new(Some(RequestHeader::new(XidType::Ping as i32, 0)), None)
+        ReqPacket::new(
+            Some(RequestHeader::new(
+                XidType::Ping as i32,
+                OpCode::Ping as i32,
+            )),
+            None,
+        )
     }
 
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
+        let max_idle = 10000;
+        tokio::time::sleep(Duration::from_secs(1));
+        // loop {
+        let idle_time =
+            Local::now().timestamp_millis() - self.metrics.lock().unwrap().last_send_timestamp;
+        let next_ping = if idle_time > 1000 {
+            self.read_timeout / 2 - idle_time - 1000
+        } else {
+            self.read_timeout / 2 - idle_time
+        };
+        if next_ping <= 0 || idle_time > max_idle {
+            // send_ping
+            self.packet_tx.send(self.create_ping_request()).await;
+            self.metrics.lock().unwrap().send_done();
+        }
+        // }
         Ok(())
     }
 }
@@ -232,7 +260,7 @@ impl HostProvider {
 pub(crate) struct Client {
     host_provider: HostProvider,
     session_timeout: i32,
-    packet_tx: Arc<Sender<ReqPacket>>,
+    packet_tx: Sender<ReqPacket>,
     buf_rx: Receiver<(ReplyHeader, BytesMut)>,
     state: States,
     session_id: i64,
@@ -271,7 +299,7 @@ impl Client {
         };
 
         let (reader, writer) = io::split(socket);
-        let metrics = Arc::new(Metrics::default());
+        let metrics = Arc::new(Mutex::new(Metrics::default()));
         // start send thread
         let (packet_tx, packet_rx): (Sender<ReqPacket>, Receiver<ReqPacket>) = mpsc::channel(2017);
         let mut sender_task = SenderTask {
@@ -313,21 +341,12 @@ impl Client {
             Ok::<_, io::Error>(())
         });
 
-        let packet_tx = Arc::new(packet_tx);
-        // start ping task
-        let mut ping_task = PingTask {
-            packet_tx: packet_tx.clone(),
-            metrics: metrics.clone(),
-        };
-        tokio::spawn(async move {
-            ping_task.run().await;
-            Ok::<_, io::Error>(())
-        });
+        let packet_tx_ping = Sender::clone(&packet_tx);
 
         let mut client = Client {
             host_provider,
             session_timeout,
-            packet_tx: packet_tx.clone(),
+            packet_tx,
             buf_rx,
             state: States::NotConnected,
             session_id: 0,
@@ -337,6 +356,16 @@ impl Client {
         };
         client.start_connect(session_timeout).await?;
         client.state = States::Connected;
+        // start ping task
+        let mut ping_task = PingTask {
+            packet_tx: packet_tx_ping,
+            metrics: metrics.clone(),
+            read_timeout: (session_timeout / 3 * 2) as i64,
+        };
+        tokio::spawn(async move {
+            ping_task.run().await;
+            Ok::<_, io::Error>(())
+        });
         Ok(client)
     }
 

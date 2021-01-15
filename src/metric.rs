@@ -2,7 +2,7 @@ use chrono::Local;
 
 #[derive(Default, Debug)]
 pub(crate) struct Metrics {
-    last_send_timestamp: i64,
+    pub last_send_timestamp: i64,
 }
 
 impl Metrics {

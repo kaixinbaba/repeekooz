@@ -16,7 +16,6 @@ mod common;
 async fn basic() {
     let basic_path = "/buruma";
     let mut zk = ZooKeeper::new("127.0.0.1:2181", 6000).await.unwrap();
-
     // 以防万一先将该节点删除
     zk.delete(basic_path).await;
 
@@ -59,7 +58,7 @@ async fn get_data() {
         .await
         .unwrap();
     info!("first {:?}", String::from_utf8(x));
-    thread::sleep(Duration::from_secs(20));
+    thread::sleep(Duration::from_secs(30));
     let x = zk.get_data_without_watcher(basic_path, None).await.unwrap();
     info!("from 1 {:?}", String::from_utf8(x));
 }
