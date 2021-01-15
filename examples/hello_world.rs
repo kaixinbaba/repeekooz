@@ -4,8 +4,8 @@ extern crate log;
 use std::thread;
 use std::time::Duration;
 
-use buruma::api::ZooKeeper;
 use buruma::ZKResult;
+use buruma::ZooKeeper;
 
 #[tokio::main]
 async fn main() -> ZKResult<()> {

@@ -62,7 +62,7 @@ impl Serializer for ConnectRequest {
     }
 }
 /// ZK 内置的 4 种 scheme
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub enum Scheme {
     World,
     IP,
@@ -71,7 +71,7 @@ pub enum Scheme {
 }
 
 /// ZooKeeper 权限对象
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ACL {
     pub perms: u32,
     pub scheme: Scheme,
@@ -93,15 +93,21 @@ impl Serializer for ACL {
     }
 }
 
+impl Default for ACL {
+    fn default() -> Self {
+        ACL {
+            perms: Perms::All as u32,
+            scheme: Scheme::World,
+            id: ANYONE.to_string(),
+        }
+    }
+}
+
 impl ACL {
     /// world 权限固定写法
     pub fn world_acl() -> Vec<ACL> {
         // TODO 缓存
-        vec![ACL {
-            perms: Perms::All as u32,
-            scheme: Scheme::World,
-            id: ANYONE.to_string(),
-        }]
+        vec![ACL::default()]
     }
 }
 

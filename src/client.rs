@@ -173,7 +173,6 @@ impl PingTask {
                 Delay::new(Duration::from_millis(self.read_timeout as u64)).await;
             }
         }
-        Ok(())
     }
 }
 

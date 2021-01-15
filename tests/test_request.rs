@@ -3,13 +3,12 @@ extern crate log;
 
 use std::thread;
 
+use futures_timer::Delay;
 use tokio::time::Duration;
 
-use buruma::constants::CreateMode;
-use buruma::protocol::req::ACL;
-
+use buruma::CreateMode;
+use buruma::ACL;
 use buruma::{WatchedEvent, Watcher, ZKResult, ZooKeeper};
-use futures_timer::Delay;
 
 mod common;
 
