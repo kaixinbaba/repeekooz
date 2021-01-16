@@ -40,12 +40,19 @@ pub(crate) enum WatcherType {
 #[derive(Debug)]
 pub enum EventType {
     None = -1,
+    /// 节点创建
     NodeCreated = 1,
+    /// 节点删除
     NodeDeleted = 2,
+    /// 节点数据变更
     NodeDataChanged = 3,
+    /// 节点子节点列表变更
     NodeChildrenChanged = 4,
+    /// 节点数据的 Watcher 监听被移除
     DataWatchRemoved = 5,
+    /// 节点子节点的 Watcher 监听被移除
     ChildWatchRemoved = 6,
+    /// 持久的 Watcher 监听被移除
     PersistentWatchRemoved = 7,
 }
 
@@ -65,14 +72,22 @@ impl From<isize> for EventType {
     }
 }
 
+/// 服务端的状态
 #[derive(Debug, Eq, PartialEq)]
 pub enum KeeperState {
+    /// 未连接
     Disconnected = 0,
+    /// 同步完成
     SyncConnected = 3,
+    /// 鉴权失败
     AuthFailed = 4,
+    /// 以只读状态连接
     ConnectedReadOnly = 5,
+    /// SASL 验证通过
     SaslAuthenticated = 6,
+    /// 会话过期
     Expired = -112,
+    /// 关闭
     Closed = 7,
 }
 
@@ -97,7 +112,7 @@ pub enum AddWatchMode {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum States {
+pub(crate) enum States {
     Connecting,
     Associating,
     Connected,
@@ -117,7 +132,7 @@ impl States {
     }
 }
 
-pub enum OpCode {
+pub(crate) enum OpCode {
     Notification = 0,
     Create = 1,
     Delete = 2,
@@ -157,14 +172,22 @@ pub enum OpKind {
     Read,
 }
 
+/// 创建的节点类型
 #[derive(Debug, Eq, PartialEq)]
 pub enum CreateMode {
+    /// 持久节点
     Persistent = 0,
+    /// 临时节点，生命周期同客户端会话
     Ephemeral = 1,
+    /// 持久顺序节点，自动添加自增序号后缀
     PersistentSequential = 2,
+    /// 临时顺序节点，自动添加自增序号后缀
     EphemeralSequential = 3,
+    /// 容器节点
     Container = 4,
+    /// 带超时时间的持久节点
     PersistentWithTTL = 5,
+    /// 带超时时间的持久顺序节点
     PersistentSequentialWithTTL = 6,
 }
 
@@ -175,7 +198,7 @@ impl CreateMode {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum XidType {
+pub(crate) enum XidType {
     Notification = -1,
     Ping = -2,
     AuthPacket = -4,
@@ -195,6 +218,7 @@ impl From<i32> for XidType {
     }
 }
 
+/// buruma 常见错误
 #[derive(Debug, Eq, PartialEq)]
 pub enum Error {
     // customer error

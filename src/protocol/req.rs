@@ -6,6 +6,7 @@ use crate::constants::{CreateMode, Perms, ANYONE, DIGEST, IP, SUPER, WORLD};
 use crate::protocol::Serializer;
 use crate::ZKResult;
 use std::fmt::{Display, Formatter};
+use std::net::IpAddr;
 
 #[derive(Debug, Default)]
 pub(crate) struct RequestHeader {
@@ -61,18 +62,22 @@ impl Serializer for ConnectRequest {
         Ok(())
     }
 }
-/// ZK 内置的 4 种 scheme
+/// ZK 内置的 3 种 scheme
+/// 第 4 种 Super 其实就是特殊的 Digest
 #[derive(Debug)]
 pub enum Scheme {
     World,
-    IP,
-    Digest,
-    Super,
+    IP(IpAddr),
+    // TODO 拆分成加密前的用户名密码，两个字段
+    Digest(String),
 }
 
 /// ZooKeeper 权限对象
+/// - `perms`：权限
+/// - `scheme`：鉴权模式，详情可见 [`Scheme`]
 #[derive(Debug)]
 pub struct ACL {
+    // TODO 该字段应该也是枚举对象或者其他有意义的类型，而不是 u32
     pub perms: u32,
     pub scheme: Scheme,
     pub id: String,
@@ -81,14 +86,20 @@ pub struct ACL {
 impl Serializer for ACL {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
         self.write_u32(self.perms, b);
-        let scheme = match self.scheme {
-            Scheme::World => WORLD,
-            Scheme::IP => IP,
-            Scheme::Digest => DIGEST,
-            Scheme::Super => SUPER,
+        match &self.scheme {
+            Scheme::World => {
+                self.write_string(WORLD, b);
+                self.write_string(ANYONE, b);
+            }
+            Scheme::IP(addr) => {
+                self.write_string(IP, b);
+                self.write_string(addr.to_string().as_str(), b);
+            }
+            Scheme::Digest(digest_info) => {
+                self.write_string(DIGEST, b);
+                self.write_string(digest_info, b);
+            }
         };
-        self.write_string(scheme, b);
-        self.write_string(self.id.as_str(), b);
         Ok(())
     }
 }

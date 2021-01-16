@@ -99,20 +99,20 @@ impl ZooKeeper {
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     pub async fn delete(&mut self, path: &str) -> ZKResult<()> {
-        self.delete_with_version(path, IGNORE_VERSION).await?;
+        self.deletev(path, IGNORE_VERSION).await?;
         Ok(())
     }
 
     /// 删除目标路径的节点数据携带版本条件，满足版本号才能删除
     /// # Examples
     /// ```rust,ignore
-    /// zk.delete_with_version("/your/path", 1024).await;
+    /// zk.deletev("/your/path", 1024).await;
     /// ```
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     /// - `version`： 节点指定的版本号，-1 为忽略版本
-    pub async fn delete_with_version(&mut self, path: &str, version: i32) -> ZKResult<()> {
+    pub async fn deletev(&mut self, path: &str, version: i32) -> ZKResult<()> {
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(0, OpCode::Delete as i32));
         let mut req = BytesMut::new();
@@ -126,32 +126,27 @@ impl ZooKeeper {
     /// 为目标路径设置数据
     /// # Examples
     /// ```rust,ignore
-    /// zk.set_data("/your/path", "Chinese Stand Up".as_bytes()).await;
+    /// zk.set("/your/path", "Chinese Stand Up".as_bytes()).await;
     /// ```
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     /// - `data`： 节点数据
-    pub async fn set_data(&mut self, path: &str, data: &[u8]) -> ZKResult<Stat> {
-        self.set_data_with_version(path, data, IGNORE_VERSION).await
+    pub async fn set(&mut self, path: &str, data: &[u8]) -> ZKResult<Stat> {
+        self.setv(path, data, IGNORE_VERSION).await
     }
 
     /// 为目标路径设置数据，携带版本条件，满足版本号才能设置成功
     /// # Examples
     /// ```rust,ignore
-    /// zk.set_data_with_version("/your/path", "Chinese Stand Up".as_bytes(), 19491001).await;
+    /// zk.setv("/your/path", "Chinese Stand Up".as_bytes(), 19491001).await;
     /// ```
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     /// - `data`： 节点数据
     /// - `version`： 节点指定的版本号，-1 为忽略版本
-    pub async fn set_data_with_version(
-        &mut self,
-        path: &str,
-        data: &[u8],
-        version: i32,
-    ) -> ZKResult<Stat> {
+    pub async fn setv(&mut self, path: &str, data: &[u8], version: i32) -> ZKResult<Stat> {
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(0, OpCode::SetData as i32));
         let mut req = BytesMut::new();
@@ -165,31 +160,27 @@ impl ZooKeeper {
     /// 获取目标路径数据，不需要回调
     /// # Examples
     /// ```rust,ignore
-    /// zk.get_data_without_watcher("/your/path", None).await;
+    /// zk.get("/your/path", None).await;
     /// ```
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     /// - `stat`： 统计数据，可选，如果不为 None 则会将节点统计结果写入该对象, 关于更多统计对象，请查看 [`Stat`]
-    pub async fn get_data_without_watcher(
-        &mut self,
-        path: &str,
-        stat: Option<&mut Stat>,
-    ) -> ZKResult<Vec<u8>> {
-        self.get_data(path, None::<DummyWatcher>, stat).await
+    pub async fn get(&mut self, path: &str, stat: Option<&mut Stat>) -> ZKResult<Vec<u8>> {
+        self.getw(path, None::<DummyWatcher>, stat).await
     }
 
     /// 获取目标路径数据，需要回调通知
     /// # Examples
     /// ```rust,ignore
-    /// zk.get_data("/your/path", Some(YourWatcherImpl), None).await;
+    /// zk.getw("/your/path", Some(YourWatcherImpl), None).await;
     /// ```
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     /// - `watcher`： 回调对象，必须实现 Watcher trait，可选
     /// - `stat`： 统计数据，可选，如果不为 None 则会将结果写入该对象, 关于更多统计对象，请查看 [`Stat`]
-    pub async fn get_data(
+    pub async fn getw(
         &mut self,
         path: &str,
         watcher: Option<impl Watcher + 'static>,

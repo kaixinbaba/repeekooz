@@ -33,9 +33,9 @@
 //!        .await
 //!        .unwrap();
 //!     // 查询节点
-//!     let result = zk.get_data_without_watcher(basic_path, None).await.unwrap();
+//!     let result = zk.get(basic_path, None).await.unwrap();
 //!     // 设置节点数据
-//!     let stat = zk.set_data(basic_path, "kaixinbaba".as_bytes()).await.unwrap();
+//!     let stat = zk.set(basic_path, "kaixinbaba".as_bytes()).await.unwrap();
 //!     // 删除节点
 //!     zk.delete(basic_path);
 //!     Ok(())     
@@ -47,7 +47,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
-// re-export, 常用的结构体全部都要导出
+// re-export, 常用的结构体全部都要导出，使得用户可以直接通过 buruma 直接引用
 pub use api::ZooKeeper;
 pub use constants::{CreateMode, EventType, KeeperState};
 pub use protocol::req::{Scheme, ACL};

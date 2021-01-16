@@ -28,9 +28,9 @@ async fn basic() {
         .await
         .unwrap();
     assert_eq!(path, basic_path);
-    let stat = zk.set_data(basic_path, "buruma".as_bytes()).await.unwrap();
+    let stat = zk.set(basic_path, "buruma".as_bytes()).await.unwrap();
     info!("{:?}", stat);
-    let get_data_result = zk.get_data_without_watcher(basic_path, None).await.unwrap();
+    let get_data_result = zk.get(basic_path, None).await.unwrap();
     assert_eq!(
         "buruma".to_string(),
         String::from_utf8(get_data_result).unwrap()
@@ -57,12 +57,9 @@ async fn get_data() {
         .await
         .unwrap();
 
-    let x = zk
-        .get_data(basic_path, Some(WatcherDemo), None)
-        .await
-        .unwrap();
+    let x = zk.getw(basic_path, Some(WatcherDemo), None).await.unwrap();
     info!("first {:?}", String::from_utf8(x));
     Delay::new(Duration::from_secs(10)).await;
-    let x = zk.get_data_without_watcher(basic_path, None).await.unwrap();
+    let x = zk.get(basic_path, None).await.unwrap();
     info!("from 1 {:?}", String::from_utf8(x));
 }
