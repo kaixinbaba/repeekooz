@@ -5,3 +5,22 @@
 - callback 函数 以及 对应的 event 处理流程
 - set_data 这种要支持直接传入一个具体类型，然后通过一些可配置的序列化规则（例如：json）存入 data 字段
 - get_data 这种要支持直接返回一个具体类型，然后通过一些可配置的序列化规则（例如：json）反序列化成对象结果
+
+
+# client api 及异步函数
+- exists
+- updateServerList
+- getSessionId
+- getSessionTimeout
+- multi
+- transaction
+- getConfig
+- getACL
+- getChildren
+- getAllChildrenNumber
+- getEphemerals
+- sync
+- removeWatches
+- removeAllWatches
+- addWatch
+- getState
