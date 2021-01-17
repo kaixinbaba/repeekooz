@@ -111,9 +111,7 @@ pub(crate) struct SetDataResponse {
 
 impl Deserializer for SetDataResponse {
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
-        let mut stat = Stat::default();
-        stat.read(b)?;
-        self.stat = stat;
+        self.stat.read(b)?;
         Ok(())
     }
 }
@@ -135,6 +133,24 @@ impl Deserializer for GetDataResponse {
 }
 
 #[derive(Debug, Default)]
+pub(crate) struct GetChildrenResponse {
+    pub children: Vec<String>,
+}
+
+impl Deserializer for GetChildrenResponse {
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        let len = self.read_i32(b);
+        if len != -1 {
+            for _ in 0..len {
+                let path = self.read_string(b);
+                self.children.push(path);
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
 pub(crate) struct WatcherEvent {
     pub keep_state: i32,
     pub event_type: i32,
@@ -143,8 +159,8 @@ pub(crate) struct WatcherEvent {
 
 impl Deserializer for WatcherEvent {
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
-        self.keep_state = self.read_i32(b);
         self.event_type = self.read_i32(b);
+        self.keep_state = self.read_i32(b);
         self.path = self.read_string(b);
         Ok(())
     }

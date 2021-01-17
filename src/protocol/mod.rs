@@ -76,19 +76,18 @@ pub trait Deserializer {
     }
 
     fn read_string(&mut self, b: &mut BytesMut) -> String {
-        let s_len = b.get_i32();
-        String::from_utf8(Vec::from(b.get(..(s_len as usize)).unwrap())).unwrap()
+        String::from_utf8(self.read_slice_unchecked(b)).unwrap()
     }
 
     fn read_slice_unchecked(&mut self, b: &mut BytesMut) -> Vec<u8> {
         let len = b.get_i32();
         if len == -1 {
-            return Vec::from([0; 16]);
+            return Vec::from([0; 0]);
         }
 
         let arr = match b.get(..(len as usize)) {
             Some(arr) => arr,
-            None => return Vec::from([0; 16]),
+            None => return Vec::from([0; 0]),
         };
         let v = Vec::from(arr);
         b.advance(len as usize);

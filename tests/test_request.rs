@@ -57,15 +57,13 @@ impl Watcher for WatcherDemo {
 #[ignore]
 async fn get_data() {
     let basic_path = "/xjj";
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(30))
         .await
         .unwrap();
 
     let x = zk.getw(basic_path, Some(WatcherDemo), None).await.unwrap();
     info!("first {:?}", String::from_utf8(x));
     Delay::new(Duration::from_secs(10)).await;
-    let x = zk.get(basic_path, None).await.unwrap();
-    info!("from 1 {:?}", String::from_utf8(x));
 }
 
 #[tokio::test]
@@ -82,4 +80,16 @@ async fn exists() {
     Delay::new(Duration::from_secs(5)).await;
     let x = zk.exists("/notExists").await;
     info!("{:?}", x);
+}
+
+#[tokio::test]
+#[ignore]
+async fn children() {
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(30))
+        .await
+        .unwrap();
+
+    let x = zk.childrenw("/xjj", Some(WatcherDemo)).await;
+    info!("{:?}", x);
+    Delay::new(Duration::from_secs(10)).await;
 }

@@ -6,10 +6,10 @@ use bytes::BytesMut;
 use crate::client::Client;
 use crate::constants::{CreateMode, Error, OpCode, IGNORE_VERSION};
 use crate::protocol::req::{
-    CreateRequest, DeleteRequest, GetDataRequest, RequestHeader, SetDataRequest, ACL,
+    CreateRequest, DeleteRequest, PathAndWatchRequest, RequestHeader, SetDataRequest, ACL,
 };
 use crate::protocol::resp::{
-    CreateResponse, GetDataResponse, IgnoreResponse, SetDataResponse, Stat,
+    CreateResponse, GetChildrenResponse, GetDataResponse, IgnoreResponse, SetDataResponse, Stat,
 };
 use crate::protocol::Serializer;
 use crate::watcher::Watcher;
@@ -206,13 +206,12 @@ impl ZooKeeper {
             Some(w) => {
                 // 注册本地回调
                 self.client
-                    .register_data_watcher(full_path.clone(), Box::new(w))
-                    .await?;
+                    .register_data_watcher(full_path.clone(), Box::new(w))?;
                 true
             }
             _ => false,
         };
-        let request = GetDataRequest::new(full_path, watch);
+        let request = PathAndWatchRequest::new(full_path, watch);
         request.write(&mut req);
         let resp = GetDataResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
@@ -260,16 +259,14 @@ impl ZooKeeper {
             Some(w) => {
                 // 注册本地回调
                 self.client
-                    .register_exists_watcher(full_path.clone(), Box::new(w))
-                    .await?;
+                    .register_exists_watcher(full_path.clone(), Box::new(w))?;
                 true
             }
             _ => false,
         };
-        let request = GetDataRequest::new(full_path, watch);
+        let request = PathAndWatchRequest::new(full_path, watch);
         request.write(&mut req);
         let resp = SetDataResponse::default();
-        // let resp = self.client.submit_request(rh, req, resp).await?;
         match self.client.submit_request(rh, req, resp).await {
             Ok(resp) => Ok(Some(resp.stat)),
             Err(e) => match e {
@@ -279,5 +276,55 @@ impl ZooKeeper {
                 }
             },
         }
+    }
+
+    /// 获取节点的子节点列表，不需要回调
+    /// # Examples
+    /// ```rust,ignore
+    /// let children_list = zk.children("/your/path").await?;
+    /// ```
+    ///
+    /// # Args
+    /// - `path`： 目标路径，必须以 "/" 开头
+    /// # Returns
+    /// - `Stat`： 统计对象，请查看 [`Stat`]
+    pub async fn children(&mut self, path: &str) -> ZKResult<Vec<String>> {
+        self.childrenw(path, None::<DummyWatcher>).await
+    }
+
+    /// 判断目标路径是否存在，需要回调通知
+    /// # Examples
+    /// ```rust,ignore
+    /// let stat = zk.childrenw("/your/path", Some(YourWatcherImpl), None).await?;
+    /// ```
+    ///
+    /// # Args
+    /// - `path`： 目标路径，必须以 "/" 开头
+    /// - `watcher`： 回调对象，必须实现 Watcher trait，可选
+    /// # Returns
+    /// - `Stat`： 统计对象，请查看 [`Stat`]
+    pub async fn childrenw(
+        &mut self,
+        path: &str,
+        watcher: Option<impl Watcher + 'static>,
+    ) -> ZKResult<Vec<String>> {
+        paths::validate_path(path)?;
+        let rh = Some(RequestHeader::new(0, OpCode::GetChildren as i32));
+        let mut req = BytesMut::new();
+        let full_path = self.client.get_path(path);
+        let watch = match watcher {
+            Some(w) => {
+                // 注册本地回调
+                self.client
+                    .register_child_watcher(full_path.clone(), Box::new(w))?;
+                true
+            }
+            _ => false,
+        };
+        let request = PathAndWatchRequest::new(full_path, watch);
+        request.write(&mut req);
+        let resp = GetChildrenResponse::default();
+        let resp = self.client.submit_request(rh, req, resp).await?;
+        Ok(resp.children)
     }
 }

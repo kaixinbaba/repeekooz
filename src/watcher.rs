@@ -59,6 +59,14 @@ impl WatcherManager {
         self.register_watcher(path, watcher, &self.exists_watches)
     }
 
+    pub(crate) fn register_child_watcher(
+        &self,
+        path: String,
+        watcher: Box<dyn Watcher>,
+    ) -> ZKResult<()> {
+        self.register_watcher(path, watcher, &self.child_watches)
+    }
+
     fn register_watcher(
         &self,
         path: String,

@@ -21,6 +21,7 @@
 - [ ] getConfig
 - [ ] getACL
 - [ ] getChildren
+- [ ] getChildren2
 - [ ] getAllChildrenNumber
 - [ ] getEphemerals
 - [ ] sync

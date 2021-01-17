@@ -238,12 +238,12 @@ impl SetDataRequest {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct GetDataRequest {
+pub(crate) struct PathAndWatchRequest {
     path: String,
     watch: bool,
 }
 
-impl Serializer for GetDataRequest {
+impl Serializer for PathAndWatchRequest {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
         self.write_string(self.path.as_str(), b);
         self.write_bool(self.watch, b);
@@ -251,8 +251,8 @@ impl Serializer for GetDataRequest {
     }
 }
 
-impl GetDataRequest {
+impl PathAndWatchRequest {
     pub(crate) fn new(path: String, watch: bool) -> Self {
-        GetDataRequest { path, watch }
+        PathAndWatchRequest { path, watch }
     }
 }

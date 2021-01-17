@@ -271,7 +271,7 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    pub(crate) async fn register_data_watcher(
+    pub(crate) fn register_data_watcher(
         &self,
         path: String,
         watcher: Box<dyn Watcher>,
@@ -280,13 +280,22 @@ impl Client {
         Ok(())
     }
 
-    pub(crate) async fn register_exists_watcher(
+    pub(crate) fn register_exists_watcher(
         &self,
         path: String,
         watcher: Box<dyn Watcher>,
     ) -> ZKResult<()> {
         self.watcher_manager
             .register_exists_watcher(path, watcher)?;
+        Ok(())
+    }
+
+    pub(crate) fn register_child_watcher(
+        &self,
+        path: String,
+        watcher: Box<dyn Watcher>,
+    ) -> ZKResult<()> {
+        self.watcher_manager.register_child_watcher(path, watcher)?;
         Ok(())
     }
 
