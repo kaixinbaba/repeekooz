@@ -39,6 +39,8 @@ async fn basic() {
         "buruma".to_string(),
         String::from_utf8(get_data_result).unwrap()
     );
+    let total_count = zk.children_count(basic_path).await.unwrap();
+    assert_eq!(total_count, 0);
     // 删除节点
     zk.delete(basic_path).await.unwrap();
 }
@@ -92,4 +94,15 @@ async fn children() {
     let x = zk.childrenw("/xjj", Some(WatcherDemo)).await;
     info!("{:?}", x);
     Delay::new(Duration::from_secs(10)).await;
+}
+
+#[tokio::test]
+#[ignore]
+async fn children_count() {
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+        .await
+        .unwrap();
+
+    let x = zk.children_count("/buruma").await;
+    info!("{:?}", x);
 }

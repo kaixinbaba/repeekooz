@@ -256,3 +256,21 @@ impl PathAndWatchRequest {
         PathAndWatchRequest { path, watch }
     }
 }
+
+#[derive(Debug, Default)]
+pub(crate) struct PathRequest {
+    path: String,
+}
+
+impl Serializer for PathRequest {
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        self.write_string(self.path.as_str(), b);
+        Ok(())
+    }
+}
+
+impl PathRequest {
+    pub(crate) fn new(path: String) -> Self {
+        PathRequest { path }
+    }
+}

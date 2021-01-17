@@ -71,8 +71,16 @@ pub trait Deserializer {
         b.get_i32()
     }
 
+    fn read_u32(&mut self, b: &mut BytesMut) -> u32 {
+        b.get_u32()
+    }
+
     fn read_i64(&mut self, b: &mut BytesMut) -> i64 {
         b.get_i64()
+    }
+
+    fn read_u64(&mut self, b: &mut BytesMut) -> u64 {
+        b.get_u64()
     }
 
     fn read_string(&mut self, b: &mut BytesMut) -> String {

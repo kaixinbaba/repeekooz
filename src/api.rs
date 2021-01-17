@@ -6,10 +6,12 @@ use bytes::BytesMut;
 use crate::client::Client;
 use crate::constants::{CreateMode, Error, OpCode, IGNORE_VERSION};
 use crate::protocol::req::{
-    CreateRequest, DeleteRequest, PathAndWatchRequest, RequestHeader, SetDataRequest, ACL,
+    CreateRequest, DeleteRequest, PathAndWatchRequest, PathRequest, RequestHeader, SetDataRequest,
+    ACL,
 };
 use crate::protocol::resp::{
-    CreateResponse, GetChildrenResponse, GetDataResponse, IgnoreResponse, SetDataResponse, Stat,
+    CreateResponse, GetAllChildrenNumberResponse, GetChildrenResponse, GetDataResponse,
+    IgnoreResponse, SetDataResponse, Stat,
 };
 use crate::protocol::Serializer;
 use crate::watcher::Watcher;
@@ -326,5 +328,27 @@ impl ZooKeeper {
         let resp = GetChildrenResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.children)
+    }
+
+    /// 获取目标路径下的所有子节点数量（包括孙子节点）
+    /// # Examples
+    /// ```rust,ignore
+    /// let total_number = zk.children_count("/your/path").await?;
+    /// ```
+    ///
+    /// # Args
+    /// - `path`： 目标路径，必须以 "/" 开头
+    /// # Returns
+    /// - `u32`： 目标路径下的所有子节点数量
+    pub async fn children_count(&mut self, path: &str) -> ZKResult<u32> {
+        paths::validate_path(path)?;
+        let rh = Some(RequestHeader::new(0, OpCode::GetAllChildrenNumber as i32));
+        let mut req = BytesMut::new();
+        let full_path = self.client.get_path(path);
+        let request = PathRequest::new(full_path);
+        request.write(&mut req);
+        let resp = GetAllChildrenNumberResponse::default();
+        let resp = self.client.submit_request(rh, req, resp).await?;
+        Ok(resp.total_number)
     }
 }

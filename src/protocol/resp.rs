@@ -125,9 +125,7 @@ pub(crate) struct GetDataResponse {
 impl Deserializer for GetDataResponse {
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
         self.data = self.read_slice_unchecked(b);
-        let mut stat = Stat::default();
-        stat.read(b)?;
-        self.stat = stat;
+        self.stat.read(b);
         Ok(())
     }
 }
@@ -146,6 +144,18 @@ impl Deserializer for GetChildrenResponse {
                 self.children.push(path);
             }
         }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct GetAllChildrenNumberResponse {
+    pub total_number: u32,
+}
+
+impl Deserializer for GetAllChildrenNumberResponse {
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        self.total_number = self.read_u32(b);
         Ok(())
     }
 }
