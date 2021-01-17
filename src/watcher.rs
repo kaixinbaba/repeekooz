@@ -48,7 +48,24 @@ impl WatcherManager {
         path: String,
         watcher: Box<dyn Watcher>,
     ) -> ZKResult<()> {
-        let mut guard = self.data_watches.lock().unwrap();
+        self.register_watcher(path, watcher, &self.data_watches)
+    }
+
+    pub(crate) fn register_exists_watcher(
+        &self,
+        path: String,
+        watcher: Box<dyn Watcher>,
+    ) -> ZKResult<()> {
+        self.register_watcher(path, watcher, &self.exists_watches)
+    }
+
+    fn register_watcher(
+        &self,
+        path: String,
+        watcher: Box<dyn Watcher>,
+        watches: &Mutex<HashMap<String, Vec<Box<dyn Watcher>>>>,
+    ) -> ZKResult<()> {
+        let mut guard = watches.lock().unwrap();
         match guard.get_mut(&path) {
             Some(v) => v.push(watcher),
             _ => {

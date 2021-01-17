@@ -280,6 +280,16 @@ impl Client {
         Ok(())
     }
 
+    pub(crate) async fn register_exists_watcher(
+        &self,
+        path: String,
+        watcher: Box<dyn Watcher>,
+    ) -> ZKResult<()> {
+        self.watcher_manager
+            .register_exists_watcher(path, watcher)?;
+        Ok(())
+    }
+
     pub(crate) fn get_path(&self, path: &str) -> String {
         let chroot = self.chroot.clone();
         let mut path = path.to_string();
