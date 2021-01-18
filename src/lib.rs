@@ -51,6 +51,7 @@ extern crate log;
 pub use api::ZooKeeper;
 pub use constants::{CreateMode, EventType, KeeperState};
 pub use protocol::req::{Scheme, ACL};
+pub use protocol::resp::Stat;
 pub use watcher::{WatchedEvent, Watcher};
 
 use crate::constants::Error;

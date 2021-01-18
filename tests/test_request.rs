@@ -8,7 +8,7 @@ use tokio::time::Duration;
 
 use buruma::CreateMode;
 use buruma::ACL;
-use buruma::{WatchedEvent, Watcher, ZKResult, ZooKeeper};
+use buruma::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
 
 mod common;
 
@@ -46,10 +46,6 @@ async fn basic() {
         String::from_utf8(get_data_result).unwrap()
     );
 
-    // children_count
-    let total_count = zk.children_count(basic_path).await.unwrap();
-    assert_eq!(total_count, 0);
-
     // get_ephemerals
     for i in 0..3 {
         zk.create(
@@ -62,6 +58,20 @@ async fn basic() {
     }
     let ephe_vec = zk.get_ephemerals(basic_path).await.unwrap();
     assert_eq!(ephe_vec.len(), 3);
+
+    // children
+    let children_list = zk.children(basic_path).await.unwrap();
+    assert_eq!(children_list.len(), 0);
+
+    // childrens
+    let mut stat = Stat::default();
+    let children_list = zk.childrens(basic_path, &mut stat).await.unwrap();
+    assert_eq!(children_list.len(), 0);
+    assert_eq!(stat.data_length, "buruma".as_bytes().len() as i32);
+
+    // children_count
+    let total_count = zk.children_count(basic_path).await.unwrap();
+    assert_eq!(total_count, 0);
 
     // delete
     zk.delete(basic_path).await.unwrap();
@@ -116,6 +126,18 @@ async fn children() {
     let x = zk.childrenw("/xjj", Some(WatcherDemo)).await;
     info!("{:?}", x);
     Delay::new(Duration::from_secs(10)).await;
+}
+
+#[tokio::test]
+#[ignore]
+async fn childrens() {
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(30))
+        .await
+        .unwrap();
+
+    let mut stat = Stat::default();
+    let x = zk.childrens("/xjj", &mut stat).await;
+    info!("{:?}, {:?}", x, stat);
 }
 
 #[tokio::test]

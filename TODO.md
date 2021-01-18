@@ -16,7 +16,7 @@
 - [x] getChildren
 - [x] getAllChildrenNumber
 - [x] getEphemerals
-- [ ] getChildren2
+- [x] getChildren2
 - [ ] getState
 - [ ] getSessionId
 - [ ] getSessionTimeout
