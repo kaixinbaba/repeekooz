@@ -73,6 +73,10 @@ async fn basic() {
     let total_count = zk.children_count(basic_path).await.unwrap();
     assert_eq!(total_count, 0);
 
+    // get_acl
+    let vec = zk.get_acl(basic_path, None).await.unwrap();
+    assert_eq!(vec[0], ACL::default());
+
     // delete
     zk.delete(basic_path).await.unwrap();
 }
@@ -186,4 +190,15 @@ async fn get_ephemerals() {
 
     let x = zk.get_ephemerals("/test").await.unwrap();
     assert_eq!(x.len(), 4);
+}
+
+#[tokio::test]
+#[ignore]
+async fn get_acl() {
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+        .await
+        .unwrap();
+
+    let x = zk.get_acl("/xjj", None).await;
+    info!("{:?}", x);
 }

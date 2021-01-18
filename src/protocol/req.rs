@@ -1,12 +1,13 @@
+use std::fmt::{Display, Formatter};
 use std::hash::Hasher;
+use std::net::{IpAddr, Ipv4Addr};
 
 use bytes::BytesMut;
 
 use crate::constants::{CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, SUPER, WORLD};
-use crate::protocol::Serializer;
+use crate::protocol::{Deserializer, Serializer};
 use crate::ZKResult;
-use std::fmt::{Display, Formatter};
-use std::net::IpAddr;
+use std::str::FromStr;
 
 #[derive(Debug, Default)]
 pub(crate) struct RequestHeader {
@@ -74,7 +75,7 @@ impl Serializer for ConnectRequest {
 }
 /// ZK 内置的 3 种 scheme
 /// 第 4 种 Super 其实就是特殊的 Digest
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Scheme {
     World,
     IP(IpAddr),
@@ -82,15 +83,25 @@ pub enum Scheme {
     Digest(String),
 }
 
+impl From<(String, String)> for Scheme {
+    fn from((scheme, id): (String, String)) -> Self {
+        match scheme.as_str() {
+            WORLD => Scheme::World,
+            IP => Scheme::IP(IpAddr::V4(Ipv4Addr::from_str(id.as_str()).unwrap())),
+            DIGEST => Scheme::Digest(id),
+            _ => panic!("Unknown Scheme : '{}' from server", scheme),
+        }
+    }
+}
+
 /// ZooKeeper 权限对象
 /// - `perms`：权限
 /// - `scheme`：鉴权模式，详情可见 [`Scheme`]
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ACL {
     // TODO 该字段应该也是枚举对象或者其他有意义的类型，而不是 u32
     pub perms: u32,
     pub scheme: Scheme,
-    pub id: String,
 }
 
 impl Serializer for ACL {
@@ -114,12 +125,21 @@ impl Serializer for ACL {
     }
 }
 
+impl Deserializer for ACL {
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        self.perms = self.read_u32(b);
+        let scheme = self.read_string(b);
+        let id = self.read_string(b);
+        self.scheme = Scheme::from((scheme, id));
+        Ok(())
+    }
+}
+
 impl Default for ACL {
     fn default() -> Self {
         ACL {
             perms: Perms::All as u32,
             scheme: Scheme::World,
-            id: ANYONE.to_string(),
         }
     }
 }

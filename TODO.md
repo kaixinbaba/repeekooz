@@ -20,15 +20,16 @@
 - [x] getState
 - [x] getSessionId
 - [x] getSessionTimeout
-- [ ] updateServerList
-- [ ] multi
-- [ ] transaction
-- [ ] getConfig
 - [ ] getACL
-- [ ] sync
+- [ ] setACL
 - [ ] removeWatches
 - [ ] removeAllWatches
 - [ ] addWatch
+- [ ] getConfig
+- [ ] updateServerList
+- [ ] multi
+- [ ] transaction
+- [ ] sync
 
 # java client async api
 - [ ] create

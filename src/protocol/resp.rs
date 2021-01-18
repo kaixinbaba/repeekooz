@@ -1,7 +1,7 @@
 use bytes::BytesMut;
 
 use crate::protocol::Deserializer;
-use crate::ZKResult;
+use crate::{ZKResult, ACL};
 
 #[derive(Debug, Default)]
 pub(crate) struct ReplyHeader {
@@ -161,6 +161,27 @@ impl Deserializer for GetChildren2Response {
             for _ in 0..len {
                 let path = self.read_string(b);
                 self.path_list.push(path);
+            }
+        }
+        self.stat.read(b);
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct GetACLResponse {
+    pub acl_list: Vec<ACL>,
+    pub stat: Stat,
+}
+
+impl Deserializer for GetACLResponse {
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        let len = self.read_i32(b);
+        if len != -1 {
+            for _ in 0..len {
+                let mut acl = ACL::default();
+                acl.read(b);
+                self.acl_list.push(acl);
             }
         }
         self.stat.read(b);
