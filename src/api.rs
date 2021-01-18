@@ -4,7 +4,7 @@
 use bytes::BytesMut;
 
 use crate::client::Client;
-use crate::constants::{CreateMode, Error, OpCode, IGNORE_VERSION};
+use crate::constants::{CreateMode, Error, OpCode, States, IGNORE_VERSION};
 use crate::protocol::req::{
     CreateRequest, DeleteRequest, PathAndWatchRequest, PathRequest, RequestHeader, SetDataRequest,
     ACL,
@@ -428,5 +428,41 @@ impl ZooKeeper {
         let resp = PathListResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.path_list)
+    }
+
+    /// 获取客户端当前状态
+    /// # Examples
+    /// ```rust,ignore
+    /// let state = zk.state()?;
+    /// ```
+    ///
+    /// # Returns
+    /// - `States`： 关于更多客户端状态，请查看 [`States`]
+    pub fn state(&self) -> ZKResult<States> {
+        Ok(self.client.state.clone())
+    }
+
+    /// 获取客户端当前 session_id
+    /// # Examples
+    /// ```rust,ignore
+    /// let session_id = zk.session_id()?;
+    /// ```
+    ///
+    /// # Returns
+    /// - `i64`： 服务端分配的唯一会话 ID
+    pub fn session_id(&self) -> ZKResult<i64> {
+        Ok(self.client.session_id)
+    }
+
+    /// 获取客户端当前会话超时时间
+    /// # Examples
+    /// ```rust,ignore
+    /// let session_id = zk.session_timeout()?;
+    /// ```
+    ///
+    /// # Returns
+    /// - `u32`： 客户端的会话超时时间
+    pub fn session_timeout(&self) -> ZKResult<u32> {
+        Ok(self.client.session_timeout)
     }
 }

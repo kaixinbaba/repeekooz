@@ -111,8 +111,8 @@ pub enum AddWatchMode {
     PersistentRecursive = 1,
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub(crate) enum States {
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum States {
     Connecting,
     Associating,
     Connected,

@@ -49,7 +49,7 @@ extern crate log;
 
 // re-export, 常用的结构体全部都要导出，使得用户可以直接通过 buruma 直接引用
 pub use api::ZooKeeper;
-pub use constants::{CreateMode, EventType, KeeperState};
+pub use constants::{CreateMode, EventType, KeeperState, States};
 pub use protocol::req::{Scheme, ACL};
 pub use protocol::resp::Stat;
 pub use watcher::{WatchedEvent, Watcher};

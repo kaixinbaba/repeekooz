@@ -259,11 +259,11 @@ impl HostProvider {
 #[derive(Debug)]
 pub(crate) struct Client {
     host_provider: HostProvider,
-    session_timeout: u32,
+    pub session_timeout: u32,
     packet_tx: Sender<ReqPacket>,
     buf_rx: Receiver<(ReplyHeader, BytesMut)>,
-    state: States,
-    session_id: i64,
+    pub state: States,
+    pub session_id: i64,
     password: Option<Vec<u8>>,
     chroot: String,
     watcher_manager: Arc<WatcherManager>,

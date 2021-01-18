@@ -17,9 +17,9 @@
 - [x] getAllChildrenNumber
 - [x] getEphemerals
 - [x] getChildren2
-- [ ] getState
-- [ ] getSessionId
-- [ ] getSessionTimeout
+- [x] getState
+- [x] getSessionId
+- [x] getSessionTimeout
 - [ ] updateServerList
 - [ ] multi
 - [ ] transaction
