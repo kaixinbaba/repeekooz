@@ -7,15 +7,15 @@
 - get_data 这种要支持直接返回一个具体类型，然后通过一些可配置的序列化规则（例如：json）反序列化成对象结果
 - 创建和删除 API 要支持递归
 
-# client api
+# java client api
 - [x] create
 - [x] delete
 - [x] getData
 - [x] setData
 - [x] exists
 - [x] getChildren
-- [ ] getAllChildrenNumber
-- [ ] getEphemerals
+- [x] getAllChildrenNumber
+- [x] getEphemerals
 - [ ] getChildren2
 - [ ] getState
 - [ ] getSessionId
@@ -30,7 +30,7 @@
 - [ ] removeAllWatches
 - [ ] addWatch
 
-# client async api
+# java client async api
 - [ ] create
 - [ ] delete
 - [ ] getData

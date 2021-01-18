@@ -19,6 +19,8 @@ use crate::protocol::{Deserializer, Serializer};
 use crate::watcher::WatcherManager;
 use crate::{WatchedEvent, Watcher, ZKError, ZKResult};
 use futures_timer::Delay;
+use std::sync::atomic::AtomicI32;
+use std::sync::atomic::Ordering::Release;
 
 struct SenderTask {
     packet_rx: Receiver<ReqPacket>,
@@ -87,12 +89,12 @@ impl ReceiverTask {
                 self.event_tx.send(WatchedEvent::from(server_event)).await;
             }
             XidType::Ping => {
-                info!("Received Ping from server");
+                trace!("Received Ping from server");
             }
             XidType::AuthPacket => {}
             XidType::SetWatches => {}
             XidType::Response => {
-                info!("Received Response from server");
+                trace!("Received Response from server");
                 self.buf_tx.send((reply_header, buf)).await;
             }
         }
@@ -147,10 +149,7 @@ struct PingTask {
 impl PingTask {
     fn create_ping_request(&self) -> ReqPacket {
         ReqPacket::new(
-            Some(RequestHeader::new(
-                XidType::Ping as i32,
-                OpCode::Ping as i32,
-            )),
+            Some(RequestHeader::new_full(XidType::Ping as i32, OpCode::Ping)),
             None,
         )
     }
@@ -268,6 +267,7 @@ pub(crate) struct Client {
     password: Option<Vec<u8>>,
     chroot: String,
     watcher_manager: Arc<WatcherManager>,
+    xid: AtomicI32,
 }
 
 impl Client {
@@ -373,6 +373,7 @@ impl Client {
             password: None,
             chroot,
             watcher_manager: watcher_manager.clone(),
+            xid: AtomicI32::new(0),
         };
         client.start_connect(session_timeout).await?;
         client.state = States::Connected;
@@ -397,7 +398,7 @@ impl Client {
         Ok(buf)
     }
 
-    async fn read_buf(&mut self) -> ZKResult<BytesMut> {
+    async fn read_buf(&mut self, xid: Option<i32>) -> ZKResult<BytesMut> {
         let buf = match self.buf_rx.recv().await {
             Some((reply_header, buf)) => {
                 if reply_header.err != 0 {
@@ -406,6 +407,11 @@ impl Client {
                         "occur error from server",
                     ));
                 }
+                if let Some(xid) = xid {
+                    if reply_header.xid != xid {
+                        return Err(ZKError(Error::ConnectionLoss, "Xid in RequestHeader != Xid in ReplyHeader, maybe occur connection loss"));
+                    }
+                }
                 buf
             }
             _ => return Err(ZKError(Error::ReadSocketError, "occur error from server")),
@@ -413,10 +419,21 @@ impl Client {
         Ok(buf)
     }
 
-    async fn write_buf(&mut self, rh: Option<RequestHeader>, req: BytesMut) -> ZKResult<()> {
+    async fn write_buf(
+        &mut self,
+        mut rh: Option<RequestHeader>,
+        req: BytesMut,
+    ) -> ZKResult<Option<i32>> {
+        let xid = match rh.as_mut() {
+            Some(mut header) => {
+                header.xid = self.xid.fetch_add(1, Release);
+                Some(header.xid)
+            }
+            _ => None,
+        };
         let packet = ReqPacket::new(rh, Some(req));
         self.packet_tx.send(packet).await;
-        Ok(())
+        Ok(xid)
     }
 
     async fn start_connect(&mut self, session_timeout: u32) -> ZKResult<()> {
@@ -430,7 +447,7 @@ impl Client {
 
         self.write_buf(None, req).await?;
 
-        let mut buf = self.read_buf().await?;
+        let mut buf = self.read_buf(None).await?;
 
         let mut response = ConnectResponse::default();
         response.read(&mut buf)?;
@@ -451,8 +468,8 @@ impl Client {
         if !self.state.is_connected() {
             return Err(ZKError(Error::ConnectionLoss, "client may be closed"));
         }
-        self.write_buf(rh, req).await?;
-        let mut buf = self.read_buf().await?;
+        let xid = self.write_buf(rh, req).await?;
+        let mut buf = self.read_buf(xid).await?;
         resp.read(&mut buf);
         Ok(resp)
     }

@@ -10,8 +10,8 @@ use crate::protocol::req::{
     ACL,
 };
 use crate::protocol::resp::{
-    CreateResponse, GetAllChildrenNumberResponse, GetChildrenResponse, GetDataResponse,
-    IgnoreResponse, SetDataResponse, Stat,
+    CreateResponse, GetAllChildrenNumberResponse, GetDataResponse, IgnoreResponse,
+    PathListResponse, SetDataResponse, Stat,
 };
 use crate::protocol::Serializer;
 use crate::watcher::Watcher;
@@ -87,7 +87,7 @@ impl ZooKeeper {
             CreateMode::Container => OpCode::CreateContainer,
             _ => OpCode::Create,
         };
-        let rh = Some(RequestHeader::new(0, rtype as i32));
+        let rh = Some(RequestHeader::new(rtype));
         let mut req = BytesMut::new();
         let request = CreateRequest::new_full(self.client.get_path(path), data, acl, create_model);
         request.write(&mut req);
@@ -120,7 +120,7 @@ impl ZooKeeper {
     /// - `version`： 节点指定的版本号，-1 为忽略版本
     pub async fn deletev(&mut self, path: &str, version: i32) -> ZKResult<()> {
         paths::validate_path(path)?;
-        let rh = Some(RequestHeader::new(0, OpCode::Delete as i32));
+        let rh = Some(RequestHeader::new(OpCode::Delete));
         let mut req = BytesMut::new();
         let request = DeleteRequest::new(self.client.get_path(path), version);
         request.write(&mut req);
@@ -158,7 +158,7 @@ impl ZooKeeper {
     /// - `Stat`： 统计对象，请查看 [`Stat`]
     pub async fn setv(&mut self, path: &str, data: &[u8], version: i32) -> ZKResult<Stat> {
         paths::validate_path(path)?;
-        let rh = Some(RequestHeader::new(0, OpCode::SetData as i32));
+        let rh = Some(RequestHeader::new(OpCode::SetData));
         let mut req = BytesMut::new();
         let request = SetDataRequest::new(self.client.get_path(path), data, version);
         request.write(&mut req);
@@ -201,7 +201,7 @@ impl ZooKeeper {
         stat: Option<&mut Stat>,
     ) -> ZKResult<Vec<u8>> {
         paths::validate_path(path)?;
-        let rh = Some(RequestHeader::new(0, OpCode::GetData as i32));
+        let rh = Some(RequestHeader::new(OpCode::GetData));
         let mut req = BytesMut::new();
         let full_path = self.client.get_path(path);
         let watch = match watcher {
@@ -254,7 +254,7 @@ impl ZooKeeper {
         watcher: Option<impl Watcher + 'static>,
     ) -> ZKResult<Option<Stat>> {
         paths::validate_path(path)?;
-        let rh = Some(RequestHeader::new(0, OpCode::Exists as i32));
+        let rh = Some(RequestHeader::new(OpCode::Exists));
         let mut req = BytesMut::new();
         let full_path = self.client.get_path(path);
         let watch = match watcher {
@@ -311,7 +311,7 @@ impl ZooKeeper {
         watcher: Option<impl Watcher + 'static>,
     ) -> ZKResult<Vec<String>> {
         paths::validate_path(path)?;
-        let rh = Some(RequestHeader::new(0, OpCode::GetChildren as i32));
+        let rh = Some(RequestHeader::new(OpCode::GetChildren));
         let mut req = BytesMut::new();
         let full_path = self.client.get_path(path);
         let watch = match watcher {
@@ -325,9 +325,9 @@ impl ZooKeeper {
         };
         let request = PathAndWatchRequest::new(full_path, watch);
         request.write(&mut req);
-        let resp = GetChildrenResponse::default();
+        let resp = PathListResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
-        Ok(resp.children)
+        Ok(resp.path_list)
     }
 
     /// 获取目标路径下的所有子节点数量（包括孙子节点）
@@ -342,7 +342,7 @@ impl ZooKeeper {
     /// - `u32`： 目标路径下的所有子节点数量
     pub async fn children_count(&mut self, path: &str) -> ZKResult<u32> {
         paths::validate_path(path)?;
-        let rh = Some(RequestHeader::new(0, OpCode::GetAllChildrenNumber as i32));
+        let rh = Some(RequestHeader::new(OpCode::GetAllChildrenNumber));
         let mut req = BytesMut::new();
         let full_path = self.client.get_path(path);
         let request = PathRequest::new(full_path);
@@ -350,5 +350,27 @@ impl ZooKeeper {
         let resp = GetAllChildrenNumberResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.total_number)
+    }
+
+    /// 获取目标路径前缀下的所有临时节点（包括孙子节点）
+    /// # Examples
+    /// ```rust,ignore
+    /// let path_list = zk.get_ephemerals("/your/path").await?;
+    /// ```
+    ///
+    /// # Args
+    /// - `path`： 目标路径，必须以 "/" 开头，不会拼接 chroot
+    /// # Returns
+    /// - `Vec<String>`： 所有符合条件临时节点的列表
+    pub async fn get_ephemerals(&mut self, path: &str) -> ZKResult<Vec<String>> {
+        paths::validate_path(path)?;
+        let rh = Some(RequestHeader::new(OpCode::GetEphemerals));
+        let mut req = BytesMut::new();
+        // 不需要拼接 chroot
+        let request = PathRequest::new(path.to_string());
+        request.write(&mut req);
+        let resp = PathListResponse::default();
+        let resp = self.client.submit_request(rh, req, resp).await?;
+        Ok(resp.path_list)
     }
 }

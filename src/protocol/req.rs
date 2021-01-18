@@ -2,7 +2,7 @@ use std::hash::Hasher;
 
 use bytes::BytesMut;
 
-use crate::constants::{CreateMode, Perms, ANYONE, DIGEST, IP, SUPER, WORLD};
+use crate::constants::{CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, SUPER, WORLD};
 use crate::protocol::Serializer;
 use crate::ZKResult;
 use std::fmt::{Display, Formatter};
@@ -10,13 +10,23 @@ use std::net::IpAddr;
 
 #[derive(Debug, Default)]
 pub(crate) struct RequestHeader {
-    xid: i32,
-    rtype: i32,
+    pub xid: i32,
+    pub rtype: i32,
 }
 
 impl RequestHeader {
-    pub(crate) fn new(xid: i32, rtype: i32) -> RequestHeader {
-        RequestHeader { xid, rtype }
+    pub(crate) fn new(rtype: OpCode) -> RequestHeader {
+        RequestHeader {
+            xid: 0,
+            rtype: rtype as i32,
+        }
+    }
+
+    pub(crate) fn new_full(xid: i32, rtype: OpCode) -> RequestHeader {
+        RequestHeader {
+            xid,
+            rtype: rtype as i32,
+        }
     }
 }
 

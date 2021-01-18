@@ -131,17 +131,17 @@ impl Deserializer for GetDataResponse {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct GetChildrenResponse {
-    pub children: Vec<String>,
+pub(crate) struct PathListResponse {
+    pub path_list: Vec<String>,
 }
 
-impl Deserializer for GetChildrenResponse {
+impl Deserializer for PathListResponse {
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
         let len = self.read_i32(b);
         if len != -1 {
             for _ in 0..len {
                 let path = self.read_string(b);
-                self.children.push(path);
+                self.path_list.push(path);
             }
         }
         Ok(())
