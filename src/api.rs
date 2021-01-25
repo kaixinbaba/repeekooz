@@ -6,8 +6,8 @@ use bytes::BytesMut;
 use crate::client::Client;
 use crate::constants::{CreateMode, Error, OpCode, States, IGNORE_VERSION};
 use crate::protocol::req::{
-    CreateRequest, DeleteRequest, PathAndWatchRequest, PathRequest, RequestHeader, SetDataRequest,
-    ACL,
+    CreateRequest, DeleteRequest, PathAndWatchRequest, PathRequest, RequestHeader, SetACLRequest,
+    SetDataRequest, ACL,
 };
 use crate::protocol::resp::{
     CreateResponse, GetACLResponse, GetAllChildrenNumberResponse, GetChildren2Response,
@@ -430,7 +430,7 @@ impl ZooKeeper {
         Ok(resp.path_list)
     }
 
-    /// 获取目标路径前缀下的所有临时节点（包括孙子节点）
+    /// 获取目标路径的权限信息
     /// # Examples
     /// ```rust,ignore
     /// let acl_list = zk.get_acl("/your/path", None).await?;
@@ -454,6 +454,34 @@ impl ZooKeeper {
             *s = resp.stat;
         }
         Ok(resp.acl_list)
+    }
+
+    /// 设置目标路径的权限信息
+    /// # Examples
+    /// ```rust,ignore
+    /// let acl_list = zk.get_acl("/your/path", None).await?;
+    /// ```
+    ///
+    /// # Args
+    /// - `path`： 目标路径，必须以 "/" 开头，不会拼接 chroot
+    /// - `Vec<ACL>`： 节点的 ACL 列表
+    /// # Returns
+    /// - `Stat`： 统计对象，请查看 [`Stat`]
+    pub async fn set_acl(
+        &mut self,
+        path: &str,
+        acl_list: Vec<ACL>,
+        version: i32,
+    ) -> ZKResult<Stat> {
+        paths::validate_path(path)?;
+        let rh = Some(RequestHeader::new(OpCode::SetACL));
+        let mut req = BytesMut::new();
+        let full_path = self.client.get_path(path);
+        let request = SetACLRequest::new(full_path, acl_list, version);
+        request.write(&mut req);
+        let resp = SetDataResponse::default();
+        let resp = self.client.submit_request(rh, req, resp).await?;
+        Ok(resp.stat)
     }
 
     /// 获取客户端当前状态

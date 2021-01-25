@@ -6,8 +6,8 @@ use std::thread;
 use futures_timer::Delay;
 use tokio::time::Duration;
 
-use buruma::CreateMode;
 use buruma::ACL;
+use buruma::{CreateMode, Scheme};
 use buruma::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
 
 mod common;
@@ -76,6 +76,19 @@ async fn basic() {
     // get_acl
     let vec = zk.get_acl(basic_path, None).await.unwrap();
     assert_eq!(vec[0], ACL::default());
+
+    // set_acl
+    let acl_list = vec![ACL {
+        perms: 21,
+        scheme: Scheme::World,
+    }];
+    zk.set_acl(basic_path, acl_list, -1).await.unwrap();
+    let vec = zk.get_acl(basic_path, None).await.unwrap();
+    let acl_list = vec![ACL {
+        perms: 21,
+        scheme: Scheme::World,
+    }];
+    assert_eq!(vec, acl_list);
 
     // delete
     zk.delete(basic_path).await.unwrap();
@@ -200,5 +213,20 @@ async fn get_acl() {
         .unwrap();
 
     let x = zk.get_acl("/xjj", None).await;
+    info!("{:?}", x);
+}
+
+#[tokio::test]
+#[ignore]
+async fn set_acl() {
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+        .await
+        .unwrap();
+
+    let acl_list = vec![ACL {
+        perms: 21,
+        scheme: Scheme::World,
+    }];
+    let x = zk.set_acl("/xjj", acl_list, -1).await;
     info!("{:?}", x);
 }

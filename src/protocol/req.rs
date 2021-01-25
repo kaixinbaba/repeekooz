@@ -1,13 +1,13 @@
 use std::fmt::{Display, Formatter};
 use std::hash::Hasher;
 use std::net::{IpAddr, Ipv4Addr};
+use std::str::FromStr;
 
 use bytes::BytesMut;
 
 use crate::constants::{CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, SUPER, WORLD};
 use crate::protocol::{Deserializer, Serializer};
 use crate::ZKResult;
-use std::str::FromStr;
 
 #[derive(Debug, Default)]
 pub(crate) struct RequestHeader {
@@ -302,5 +302,31 @@ impl Serializer for PathRequest {
 impl PathRequest {
     pub(crate) fn new(path: String) -> Self {
         PathRequest { path }
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct SetACLRequest {
+    path: String,
+    acl_list: Vec<ACL>,
+    version: i32,
+}
+
+impl Serializer for SetACLRequest {
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        self.write_string(self.path.as_str(), b);
+        self.write_vec(&self.acl_list, b);
+        self.write_i32(self.version, b);
+        Ok(())
+    }
+}
+
+impl SetACLRequest {
+    pub(crate) fn new(path: String, acl_list: Vec<ACL>, version: i32) -> Self {
+        SetACLRequest {
+            path,
+            acl_list,
+            version,
+        }
     }
 }
