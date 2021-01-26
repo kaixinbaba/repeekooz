@@ -67,6 +67,19 @@ impl WatcherManager {
         self.register_watcher(path, watcher, &self.child_watches)
     }
 
+    pub(crate) fn register_persistent_watcher(
+        &self,
+        path: String,
+        watcher: Box<dyn Watcher>,
+        recursive: bool,
+    ) -> ZKResult<()> {
+        if recursive {
+            self.register_watcher(path, watcher, &self.persistent_recursive_watches)
+        } else {
+            self.register_watcher(path, watcher, &self.persistent_watches)
+        }
+    }
+
     fn register_watcher(
         &self,
         path: String,
@@ -111,11 +124,11 @@ impl WatcherManager {
         if let Some(v) = self.persistent_watches.lock().unwrap().get_mut(path) {
             watchers.append(v);
         }
-        // TODO 需要递归求出路径
         if let Some(v) = self
             .persistent_recursive_watches
             .lock()
             .unwrap()
+            // TODO 需要递归求出路径
             .get_mut(path)
         {
             watchers.append(v);
@@ -126,7 +139,7 @@ impl WatcherManager {
         &self,
         event: &WatchedEvent,
     ) -> Vec<Box<dyn Watcher>> {
-        let mut watchers = Vec::new();
+        let mut watchers: Vec<Box<dyn Watcher>> = Vec::new();
         match event.event_type {
             EventType::None => {
                 let clear =

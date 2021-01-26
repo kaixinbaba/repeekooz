@@ -106,6 +106,7 @@ impl From<isize> for KeeperState {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum AddWatchMode {
     Persistent = 0,
     PersistentRecursive = 1,

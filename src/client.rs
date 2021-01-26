@@ -122,11 +122,11 @@ struct EventTask {
 }
 
 impl EventTask {
-    async fn process_event(&self, event: WatchedEvent, watchers: Vec<Box<dyn Watcher>>) {
-        for w in watchers {
-            w.process(&event);
-        }
-    }
+    // async fn process_event(&self, event: WatchedEvent, watchers: Vec<Box<dyn Watcher>>) {
+    //     for w in watchers {
+    //         w.process(&event);
+    //     }
+    // }
 
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
         loop {
@@ -135,7 +135,7 @@ impl EventTask {
                 None => continue,
             };
             let watchers = self.watcher_manager.find_need_triggered_watchers(&event);
-            self.process_event(event, watchers).await;
+            // self.process_event(event, watchers).await;
         }
     }
 }
@@ -296,6 +296,17 @@ impl Client {
         watcher: Box<dyn Watcher>,
     ) -> ZKResult<()> {
         self.watcher_manager.register_child_watcher(path, watcher)?;
+        Ok(())
+    }
+
+    pub(crate) fn register_persistent_watcher(
+        &self,
+        path: String,
+        watcher: Box<dyn Watcher>,
+        recursive: bool,
+    ) -> ZKResult<()> {
+        self.watcher_manager
+            .register_persistent_watcher(path, watcher, recursive)?;
         Ok(())
     }
 

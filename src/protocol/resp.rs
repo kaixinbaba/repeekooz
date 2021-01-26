@@ -202,6 +202,15 @@ impl Deserializer for GetAllChildrenNumberResponse {
 }
 
 #[derive(Debug, Default)]
+pub(crate) struct DummyResponse;
+
+impl Deserializer for DummyResponse {
+    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
 pub(crate) struct WatcherEvent {
     pub keep_state: i32,
     pub event_type: i32,

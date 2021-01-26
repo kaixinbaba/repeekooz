@@ -1,23 +1,18 @@
 //! # ZooKeeper API 模块
 //! 作为整个项目的入口文件，提供友好的 API 方法用于操作 ZK。
 
-use bytes::BytesMut;
-
-use crate::client::Client;
-use crate::constants::{CreateMode, Error, OpCode, States, IGNORE_VERSION};
-use crate::protocol::req::{
-    CreateRequest, DeleteRequest, PathAndWatchRequest, PathRequest, RequestHeader, SetACLRequest,
-    SetDataRequest, ACL,
-};
-use crate::protocol::resp::{
-    CreateResponse, GetACLResponse, GetAllChildrenNumberResponse, GetChildren2Response,
-    GetDataResponse, IgnoreResponse, PathListResponse, SetDataResponse, Stat,
-};
-use crate::protocol::Serializer;
-use crate::watcher::Watcher;
-use crate::{paths, WatchedEvent, ZKError, ZKResult};
 use std::thread;
 use std::time::Duration;
+
+use bytes::BytesMut;
+
+use crate::{paths, WatchedEvent, ZKError, ZKResult};
+use crate::client::Client;
+use crate::constants::{AddWatchMode, CreateMode, Error, IGNORE_VERSION, OpCode, States};
+use crate::protocol::req::{ACL, AddWatchRequest, CreateRequest, DeleteRequest, PathAndWatchRequest, PathRequest, RequestHeader, SetACLRequest, SetDataRequest};
+use crate::protocol::resp::{CreateResponse, DummyResponse, GetACLResponse, GetAllChildrenNumberResponse, GetChildren2Response, GetDataResponse, IgnoreResponse, PathListResponse, SetDataResponse, Stat};
+use crate::protocol::Serializer;
+use crate::watcher::Watcher;
 
 /// 整个模块的 API 入口对象
 #[derive(Debug)]
@@ -27,6 +22,7 @@ pub struct ZooKeeper {
 
 #[derive(Debug, Hash)]
 struct DummyWatcher;
+
 impl Watcher for DummyWatcher {
     fn process(&self, _: &WatchedEvent) -> ZKResult<()> {
         Ok(())
@@ -71,7 +67,7 @@ impl ZooKeeper {
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     /// - `data`： 节点的数据，可选
-    /// - `acl`： 该节点的权限数据
+    /// - `acl`： 该节点的权限数据，可以有多个，参考 [`ACL`]
     /// - `create_model`： 节点的模式，参考 [`CreateMode`]
     /// # Returns
     /// - `String`：目标路径，同参数 `path`
@@ -79,7 +75,7 @@ impl ZooKeeper {
         &mut self,
         path: &str,
         data: Option<&[u8]>,
-        acl: Vec<ACL>,
+        acl_list: Vec<ACL>,
         create_model: CreateMode,
     ) -> ZKResult<String> {
         paths::validate_path(path)?;
@@ -89,7 +85,7 @@ impl ZooKeeper {
         };
         let rh = Some(RequestHeader::new(rtype));
         let mut req = BytesMut::new();
-        let request = CreateRequest::new_full(self.client.get_path(path), data, acl, create_model);
+        let request = CreateRequest::new_full(self.client.get_path(path), data, acl_list, create_model);
         request.write(&mut req);
         let resp = CreateResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
@@ -190,7 +186,7 @@ impl ZooKeeper {
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
-    /// - `watcher`： 回调对象，必须实现 Watcher trait，可选
+    /// - `watcher`： 回调对象，必须实现 [`Watcher`] trait，可选
     /// - `stat`： 统计数据，可选，如果不为 None 则会将结果写入该对象, 关于更多统计对象，请查看 [`Stat`]
     /// # Returns
     /// - `Vec<u8>`： 目标节点的数据以字节数组的形式
@@ -245,7 +241,7 @@ impl ZooKeeper {
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
-    /// - `watcher`： 回调对象，必须实现 Watcher trait，可选
+    /// - `watcher`： 回调对象，必须实现 [`Watcher`] trait，可选
     /// # Returns
     /// - `Stat`： 统计对象，请查看 [`Stat`]
     pub async fn existsw(
@@ -302,7 +298,7 @@ impl ZooKeeper {
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
-    /// - `watcher`： 回调对象，必须实现 Watcher trait，可选
+    /// - `watcher`： 回调对象，必须实现 [`Watcher`] trait，可选
     /// # Returns
     /// - `Vec<String>`： 子节点列表
     pub async fn childrenw(
@@ -355,7 +351,7 @@ impl ZooKeeper {
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
-    /// - `watcher`： 回调对象，必须实现 Watcher trait，可选
+    /// - `watcher`： 回调对象，必须实现 [`Watcher`] trait，可选
     /// - `stat`： 统计数据，统计结果会写入该对象, 关于更多统计对象，请查看 [`Stat`]
     /// # Returns
     /// - `Vec<String>`： 子节点列表
@@ -437,7 +433,7 @@ impl ZooKeeper {
     /// ```
     ///
     /// # Args
-    /// - `path`： 目标路径，必须以 "/" 开头，不会拼接 chroot
+    /// - `path`： 目标路径，必须以 "/" 开头
     /// - `stat`： 统计数据，可选，如果不为 None 则会将结果写入该对象, 关于更多统计对象，请查看 [`Stat`]
     /// # Returns
     /// - `Vec<ACL>`： 节点的 ACL 列表
@@ -463,8 +459,8 @@ impl ZooKeeper {
     /// ```
     ///
     /// # Args
-    /// - `path`： 目标路径，必须以 "/" 开头，不会拼接 chroot
-    /// - `Vec<ACL>`： 节点的 ACL 列表
+    /// - `path`： 目标路径，必须以 "/" 开头
+    /// - `acl_list`： 该节点的权限数据，可以有多个，参考 [`ACL`]
     /// # Returns
     /// - `Stat`： 统计对象，请查看 [`Stat`]
     pub async fn set_acl(
@@ -482,6 +478,34 @@ impl ZooKeeper {
         let resp = SetDataResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.stat)
+    }
+
+    /// 为目标路径添加回调通知
+    /// # Examples
+    /// ```rust,ignore
+    /// zk.add_watch("/your/path", YourWatcherImpl, AddWatchMode::Persistent).await?;
+    /// ```
+    ///
+    /// # Args
+    /// - `path`： 目标路径，必须以 "/" 开头
+    /// - `watcher`： 回调对象，必须实现 [`Watcher`] trait
+    /// - `mode`： 添加回调的种类，请查看 [`AddWatchMode`]
+    pub async fn add_watch<W: Watcher + 'static>(
+        &mut self,
+        path: &str,
+        watcher: W,
+        mode: AddWatchMode,
+    ) -> ZKResult<()> {
+        paths::validate_path(path)?;
+        let rh = Some(RequestHeader::new(OpCode::AddWatch));
+        let mut req = BytesMut::new();
+        let full_path = self.client.get_path(path);
+        self.client.register_persistent_watcher(full_path.clone(), Box::new(watcher),
+                                         mode == AddWatchMode::PersistentRecursive)?;
+        let request = AddWatchRequest::new(full_path, mode);
+        request.write(&mut req);
+        self.client.submit_request(rh, req, DummyResponse::default()).await?;
+        Ok(())
     }
 
     /// 获取客户端当前状态

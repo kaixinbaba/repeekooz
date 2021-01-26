@@ -6,7 +6,7 @@ use std::thread;
 use futures_timer::Delay;
 use tokio::time::Duration;
 
-use buruma::ACL;
+use buruma::{ACL, AddWatchMode};
 use buruma::{CreateMode, Scheme};
 use buruma::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
 
@@ -229,4 +229,16 @@ async fn set_acl() {
     }];
     let x = zk.set_acl("/xjj", acl_list, -1).await;
     info!("{:?}", x);
+}
+
+#[tokio::test]
+#[ignore]
+async fn add_watch() {
+    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+        .await
+        .unwrap();
+
+    let x = zk.add_watch("/xjj", WatcherDemo, AddWatchMode::Persistent).await;
+    info!("{:?}", x);
+    Delay::new(Duration::from_secs(120)).await;
 }

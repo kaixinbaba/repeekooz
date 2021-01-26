@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use bytes::BytesMut;
 
-use crate::constants::{CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, SUPER, WORLD};
+use crate::constants::{AddWatchMode, CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, SUPER, WORLD};
 use crate::protocol::{Deserializer, Serializer};
 use crate::ZKResult;
 
@@ -327,6 +327,28 @@ impl SetACLRequest {
             path,
             acl_list,
             version,
+        }
+    }
+}
+#[derive(Debug, Default)]
+pub(crate) struct AddWatchRequest {
+    path: String,
+    mode: u32,
+}
+
+impl Serializer for AddWatchRequest {
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        self.write_string(self.path.as_str(), b);
+        self.write_u32(self.mode, b);
+        Ok(())
+    }
+}
+
+impl AddWatchRequest {
+    pub(crate) fn new(path: String, mode: AddWatchMode) -> Self {
+        AddWatchRequest {
+            path,
+            mode: mode as u32,
         }
     }
 }

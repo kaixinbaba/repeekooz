@@ -7,6 +7,8 @@
 - get_data 这种要支持直接返回一个具体类型，然后通过一些可配置的序列化规则（例如：json）反序列化成对象结果
 - 创建和删除 API 要支持递归
 - Perms 需要更有意义的类型，并且转成 String 后需要更容易识别的，比如 CRWDA 这种，或者 Read Write 这种
+- version 字段需要换成枚举
+- addWatch 只能触发一次，要么想办法把 Watcher clone
 
 # java client api
 - [x] create
