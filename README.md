@@ -1,7 +1,8 @@
 # buruma
-ZooKeeper client written in pure Rust for humans
+Async ZooKeeper client written in pure Rust by tokio for humans.
+使用 [Rust](https://www.rust-lang.org/) 基于 [tokio](https://tokio.rs/) 编写的 [ZooKeeper](https://zookeeper.apache.org/) 高性能异步客户端。
 
-![](./buruma.png)
+![女神](./buruma.png)
 
 ## Basic Usage
 引入依赖，在 `Cargo.toml`
