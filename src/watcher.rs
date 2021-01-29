@@ -120,18 +120,22 @@ impl WatcherManager {
         }
     }
 
-    fn add_persistent_watches(&self, path: &String, watchers: &mut Vec<Box<dyn Watcher>>) {
-        if let Some(v) = self.persistent_watches.lock().unwrap().get_mut(path) {
-            watchers.append(v);
+    fn trigger_persistent_watches(&self, event: &WatchedEvent) {
+        if let Some(v) = self.persistent_watches.lock().unwrap().get(&event.path) {
+            for ww in v.iter() {
+                ww.process(event);
+            }
         }
         if let Some(v) = self
             .persistent_recursive_watches
             .lock()
             .unwrap()
             // TODO 需要递归求出路径
-            .get_mut(path)
+            .get(&event.path)
         {
-            watchers.append(v);
+            for ww in v.iter() {
+                ww.process(event);
+            }
         }
     }
 
@@ -177,17 +181,17 @@ impl WatcherManager {
             EventType::NodeCreated | EventType::NodeDataChanged => {
                 self.add_watches(&event.path, &mut watchers, &self.data_watches);
                 self.add_watches(&event.path, &mut watchers, &self.exists_watches);
-                self.add_persistent_watches(&event.path, &mut watchers);
+                self.trigger_persistent_watches(&event);
             }
             EventType::NodeChildrenChanged => {
                 self.add_watches(&event.path, &mut watchers, &self.child_watches);
-                self.add_persistent_watches(&event.path, &mut watchers);
+                self.trigger_persistent_watches(&event);
             }
             EventType::NodeDeleted => {
                 self.add_watches(&event.path, &mut watchers, &self.data_watches);
                 self.add_watches(&event.path, &mut watchers, &self.exists_watches);
                 self.add_watches(&event.path, &mut watchers, &self.child_watches);
-                self.add_persistent_watches(&event.path, &mut watchers);
+                self.trigger_persistent_watches(&event);
             }
             _ => panic!("Invalid EventType! {:?}", event.event_type),
         }
