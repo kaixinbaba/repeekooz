@@ -8,7 +8,7 @@
 - 创建和删除 API 要支持递归
 - Perms 需要更有意义的类型，并且转成 String 后需要更容易识别的，比如 CRWDA 这种，或者 Read Write 这种
 - version 字段需要换成枚举
-- addWatch 使用引用当场触发解决了只触发一次的情况，有没有更好的写法？persistent_recursive_watches 需要递归找出所有的path
+- addWatch 使用引用当场触发解决了只触发一次的情况，有没有更好的写法？
 
 # java client api
 - [x] create

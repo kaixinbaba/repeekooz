@@ -6,7 +6,7 @@ use std::thread;
 use futures_timer::Delay;
 use tokio::time::Duration;
 
-use buruma::{ACL, AddWatchMode};
+use buruma::{AddWatchMode, ACL};
 use buruma::{CreateMode, Scheme};
 use buruma::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
 
@@ -238,7 +238,9 @@ async fn add_watch() {
         .await
         .unwrap();
 
-    let x = zk.add_watch("/xjj", WatcherDemo, AddWatchMode::Persistent).await;
+    let x = zk
+        .add_watch("/xjj", WatcherDemo, AddWatchMode::PersistentRecursive)
+        .await;
     info!("{:?}", x);
     Delay::new(Duration::from_secs(120)).await;
 }

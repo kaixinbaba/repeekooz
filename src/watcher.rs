@@ -120,21 +120,21 @@ impl WatcherManager {
         }
     }
 
+    fn path_iter(path: &String) {
+        let split = path.split("/");
+    }
+
     fn trigger_persistent_watches(&self, event: &WatchedEvent) {
         if let Some(v) = self.persistent_watches.lock().unwrap().get(&event.path) {
             for ww in v.iter() {
                 ww.process(event);
             }
         }
-        if let Some(v) = self
-            .persistent_recursive_watches
-            .lock()
-            .unwrap()
-            // TODO 需要递归求出路径
-            .get(&event.path)
-        {
-            for ww in v.iter() {
-                ww.process(event);
+        for p in PathIterable::new(&event.path, i32::max_value()).into_iter() {
+            if let Some(v) = self.persistent_recursive_watches.lock().unwrap().get(p) {
+                for ww in v.iter() {
+                    ww.process(event);
+                }
             }
         }
     }
@@ -196,5 +196,43 @@ impl WatcherManager {
             _ => panic!("Invalid EventType! {:?}", event.event_type),
         }
         watchers
+    }
+}
+
+struct PathIterable<'a> {
+    path: &'a str,
+    max_level: i32,
+    level: i32,
+}
+
+impl<'a> Iterator for PathIterable<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.path == "" || self.level >= self.max_level {
+            return None;
+        }
+        let mut local_path = self.path;
+        self.level += 1;
+        if self.path == "/" {
+            self.path = "";
+        } else {
+            self.path = &self.path[0..self.path.rfind("/").unwrap()];
+            if self.path == "" {
+                self.path = "/";
+            }
+        }
+
+        Some(local_path)
+    }
+}
+
+impl<'a> PathIterable<'a> {
+    fn new(path: &'a str, max_level: i32) -> Self {
+        PathIterable {
+            path,
+            max_level,
+            level: -1,
+        }
     }
 }
