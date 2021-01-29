@@ -121,7 +121,7 @@ impl WatcherManager {
     }
 
     fn path_iter(path: &String) {
-        let split = path.split("/");
+        let _split = path.split("/");
     }
 
     fn trigger_persistent_watches(&self, event: &WatchedEvent) {
@@ -212,7 +212,7 @@ impl<'a> Iterator for PathIterable<'a> {
         if self.path == "" || self.level >= self.max_level {
             return None;
         }
-        let mut local_path = self.path;
+        let local_path = self.path;
         self.level += 1;
         if self.path == "/" {
             self.path = "";

@@ -134,7 +134,7 @@ impl EventTask {
                 Some(event) => event,
                 None => continue,
             };
-            let watchers = self.watcher_manager.find_need_triggered_watchers(&event);
+            let _watchers = self.watcher_manager.find_need_triggered_watchers(&event);
             // self.process_event(event, watchers).await;
         }
     }

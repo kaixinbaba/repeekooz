@@ -205,7 +205,7 @@ impl Deserializer for GetAllChildrenNumberResponse {
 pub(crate) struct DummyResponse;
 
 impl Deserializer for DummyResponse {
-    fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
+    fn read(&mut self, _b: &mut BytesMut) -> ZKResult<()> {
         Ok(())
     }
 }

@@ -1,11 +1,11 @@
-use std::fmt::{Display, Formatter};
+
 use std::hash::Hasher;
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
 use bytes::BytesMut;
 
-use crate::constants::{AddWatchMode, CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, SUPER, WORLD};
+use crate::constants::{AddWatchMode, CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, WORLD};
 use crate::protocol::{Deserializer, Serializer};
 use crate::ZKResult;
 

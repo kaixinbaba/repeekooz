@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate log;
 
-use std::thread;
+
 use std::time::Duration;
 
 use buruma::ZKResult;

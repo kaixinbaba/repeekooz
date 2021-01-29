@@ -1,7 +1,7 @@
 //! # ZooKeeper API 模块
 //! 作为整个项目的入口文件，提供友好的 API 方法用于操作 ZK。
 
-use std::thread;
+
 use std::time::Duration;
 
 use bytes::BytesMut;
