@@ -25,7 +25,7 @@
 - [x] getSessionTimeout
 - [x] getACL
 - [x] setACL
-- [ ] addWatch
+- [x] addWatch
 - [ ] removeWatches
 - [ ] removeAllWatches
 - [ ] getConfig
