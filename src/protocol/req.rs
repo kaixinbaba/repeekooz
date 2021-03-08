@@ -1,4 +1,3 @@
-
 use std::hash::Hasher;
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
@@ -7,7 +6,7 @@ use bytes::BytesMut;
 
 use crate::constants::{AddWatchMode, CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, WORLD};
 use crate::protocol::{Deserializer, Serializer};
-use crate::ZKResult;
+use crate::{WatcherType, ZKResult};
 
 #[derive(Debug, Default)]
 pub(crate) struct RequestHeader {
@@ -349,6 +348,29 @@ impl AddWatchRequest {
         AddWatchRequest {
             path,
             mode: mode as u32,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct CheckWatchesRequest {
+    path: String,
+    watcher_type: u32,
+}
+
+impl Serializer for CheckWatchesRequest {
+    fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
+        self.write_string(self.path.as_str(), b);
+        self.write_u32(self.watcher_type, b);
+        Ok(())
+    }
+}
+
+impl CheckWatchesRequest {
+    pub(crate) fn new(path: String, watcher_type: WatcherType) -> Self {
+        CheckWatchesRequest {
+            path,
+            watcher_type: watcher_type as u32,
         }
     }
 }

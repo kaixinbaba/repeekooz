@@ -9,6 +9,7 @@
 - Perms 需要更有意义的类型，并且转成 String 后需要更容易识别的，比如 CRWDA 这种，或者 Read Write 这种
 - version 字段需要换成枚举
 - addWatch 使用引用当场触发解决了只触发一次的情况，有没有更好的写法？
+- 提供命令行工具解析 ZK 的快照文件和日志文件，并可以修改
 
 # java client api
 - [x] create

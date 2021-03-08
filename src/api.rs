@@ -1,18 +1,23 @@
 //! # ZooKeeper API 模块
 //! 作为整个项目的入口文件，提供友好的 API 方法用于操作 ZK。
 
-
 use std::time::Duration;
 
 use bytes::BytesMut;
 
-use crate::{paths, WatchedEvent, ZKError, ZKResult};
 use crate::client::Client;
-use crate::constants::{AddWatchMode, CreateMode, Error, IGNORE_VERSION, OpCode, States};
-use crate::protocol::req::{ACL, AddWatchRequest, CreateRequest, DeleteRequest, PathAndWatchRequest, PathRequest, RequestHeader, SetACLRequest, SetDataRequest};
-use crate::protocol::resp::{CreateResponse, DummyResponse, GetACLResponse, GetAllChildrenNumberResponse, GetChildren2Response, GetDataResponse, IgnoreResponse, PathListResponse, SetDataResponse, Stat};
+use crate::constants::{AddWatchMode, CreateMode, Error, OpCode, States, IGNORE_VERSION};
+use crate::protocol::req::{
+    AddWatchRequest, CheckWatchesRequest, CreateRequest, DeleteRequest, PathAndWatchRequest,
+    PathRequest, RequestHeader, SetACLRequest, SetDataRequest, ACL,
+};
+use crate::protocol::resp::{
+    CreateResponse, DummyResponse, GetACLResponse, GetAllChildrenNumberResponse,
+    GetChildren2Response, GetDataResponse, IgnoreResponse, PathListResponse, SetDataResponse, Stat,
+};
 use crate::protocol::Serializer;
 use crate::watcher::Watcher;
+use crate::{paths, WatchedEvent, WatcherType, ZKError, ZKResult};
 
 /// 整个模块的 API 入口对象
 #[derive(Debug)]
@@ -85,7 +90,8 @@ impl ZooKeeper {
         };
         let rh = Some(RequestHeader::new(rtype));
         let mut req = BytesMut::new();
-        let request = CreateRequest::new_full(self.client.get_path(path), data, acl_list, create_model);
+        let request =
+            CreateRequest::new_full(self.client.get_path(path), data, acl_list, create_model);
         request.write(&mut req);
         let resp = CreateResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
@@ -500,11 +506,48 @@ impl ZooKeeper {
         let rh = Some(RequestHeader::new(OpCode::AddWatch));
         let mut req = BytesMut::new();
         let full_path = self.client.get_path(path);
-        self.client.register_persistent_watcher(full_path.clone(), Box::new(watcher),
-                                         mode == AddWatchMode::PersistentRecursive)?;
+        self.client.register_persistent_watcher(
+            full_path.clone(),
+            Box::new(watcher),
+            mode == AddWatchMode::PersistentRecursive,
+        )?;
         let request = AddWatchRequest::new(full_path, mode);
         request.write(&mut req);
-        self.client.submit_request(rh, req, DummyResponse::default()).await?;
+        self.client
+            .submit_request(rh, req, DummyResponse::default())
+            .await?;
+        Ok(())
+    }
+
+    /// 删除目标路径上指定类型的回调通知
+    /// # Examples
+    /// ```rust,ignore
+    /// zk.remove_watches("/your/path", YourWatcherImpl, WatcherType::Any, true).await?;
+    /// ```
+    ///
+    /// # Args
+    /// - `path`： 目标路径，必须以 "/" 开头
+    /// - `watcher`： 回调对象，必须实现 [`Watcher`] trait
+    /// - `watcher_type`： 回调的类型，请查看 [`WatcherType`]
+    /// - `local`：
+    pub async fn remove_watches<W: Watcher + 'static>(
+        &mut self,
+        path: &str,
+        watcher: W,
+        watcher_type: WatcherType,
+        local: bool,
+    ) -> ZKResult<()> {
+        paths::validate_path(path)?;
+        let rh = Some(RequestHeader::new(OpCode::CheckWatches));
+        let mut req = BytesMut::new();
+        let full_path = self.client.get_path(path);
+        // Java 中的 watchDeregistration 怎么实现
+        let request = CheckWatchesRequest::new(full_path, watcher_type);
+
+        request.write(&mut req);
+        self.client
+            .submit_request(rh, req, DummyResponse::default())
+            .await?;
         Ok(())
     }
 
@@ -535,7 +578,7 @@ impl ZooKeeper {
     /// 获取客户端当前会话超时时间
     /// # Examples
     /// ```rust,ignore
-    /// let session_id = zk.session_timeout()?;
+    /// let session_timeout = zk.session_timeout()?;
     /// ```
     ///
     /// # Returns

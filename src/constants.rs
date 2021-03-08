@@ -31,7 +31,7 @@ pub const ANYONE: &str = "anyone";
 /// 忽略版本号，一般用于 set_data 或 delete
 pub const IGNORE_VERSION: i32 = -1;
 
-pub(crate) enum WatcherType {
+pub enum WatcherType {
     Children = 1,
     Data = 2,
     Any = 3,
