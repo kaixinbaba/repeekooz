@@ -9,8 +9,7 @@ public class App {
     public static void main(String[] args) throws Exception {
         TestingServer testingServer = null;
         try {
-            testingServer = new TestingServer(2181, false);
-            testingServer.start();
+            testingServer = new TestingServer(2181);
         } catch (Exception e) {
             e.printStackTrace();
             if (testingServer != null) {
