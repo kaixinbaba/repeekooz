@@ -9,17 +9,17 @@ use tokio::time::Duration;
 use buruma::{AddWatchMode, ACL};
 use buruma::{CreateMode, Scheme};
 use buruma::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
+use crate::common::DEFAULT_ZK_SERVER;
 
 mod common;
 
 #[tokio::test]
-async fn basic() {
+async fn basic_zk36() {
+    common::set_up("36").await;
     let basic_path = "/buruma";
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(6))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(6))
         .await
         .unwrap();
-    // 以防万一先将该节点删除
-    zk.delete(basic_path).await;
 
     // create
     let data = Some("I Love U".as_bytes());
@@ -92,6 +92,10 @@ async fn basic() {
 
     // delete
     zk.delete(basic_path).await.unwrap();
+
+
+    // tearDown
+    common::tear_down("36");
 }
 
 #[derive(Debug, Hash)]
@@ -108,7 +112,7 @@ impl Watcher for WatcherDemo {
 #[ignore]
 async fn get_data() {
     let basic_path = "/xjj";
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(30))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(30))
         .await
         .unwrap();
 
@@ -120,7 +124,7 @@ async fn get_data() {
 #[tokio::test]
 #[ignore]
 async fn exists() {
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(10))
         .await
         .unwrap();
 
@@ -136,7 +140,7 @@ async fn exists() {
 #[tokio::test]
 #[ignore]
 async fn children() {
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(30))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(30))
         .await
         .unwrap();
 
@@ -148,7 +152,7 @@ async fn children() {
 #[tokio::test]
 #[ignore]
 async fn childrens() {
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(30))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(30))
         .await
         .unwrap();
 
@@ -160,7 +164,7 @@ async fn childrens() {
 #[tokio::test]
 #[ignore]
 async fn children_count() {
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(10))
         .await
         .unwrap();
 
@@ -171,7 +175,7 @@ async fn children_count() {
 #[tokio::test]
 #[ignore]
 async fn get_ephemerals() {
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(3))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(3))
         .await
         .unwrap();
     // setup
@@ -208,7 +212,7 @@ async fn get_ephemerals() {
 #[tokio::test]
 #[ignore]
 async fn get_acl() {
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(10))
         .await
         .unwrap();
 
@@ -219,7 +223,7 @@ async fn get_acl() {
 #[tokio::test]
 #[ignore]
 async fn set_acl() {
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(10))
         .await
         .unwrap();
 
@@ -234,7 +238,7 @@ async fn set_acl() {
 #[tokio::test]
 #[ignore]
 async fn add_watch() {
-    let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(10))
+    let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(10))
         .await
         .unwrap();
 

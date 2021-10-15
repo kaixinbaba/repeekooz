@@ -15,7 +15,7 @@
 //!
 //! ## 简单示例
 //!
-//! ```rust
+//! ```rust,ignore
 //! extern crate buruma;
 //! use buruma::ZooKeeper;
 //! use buruma::ZKResult;
@@ -46,6 +46,8 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate cmd_lib;
 
 // re-export, 常用的结构体全部都要导出，使得用户可以直接通过 buruma 直接引用
 pub use api::ZooKeeper;
