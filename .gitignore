@@ -6,3 +6,6 @@ Cargo.lock
 
 
 target
+
+apache-zookeeper-*
+zookeeper*

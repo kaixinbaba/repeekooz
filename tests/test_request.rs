@@ -15,7 +15,7 @@ mod common;
 
 #[tokio::test]
 async fn basic_zk36() {
-    common::set_up("36").await;
+    // common::set_up("36").await;
     let basic_path = "/buruma";
     let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(6))
         .await
@@ -95,7 +95,7 @@ async fn basic_zk36() {
 
 
     // tearDown
-    common::tear_down("36");
+    // common::tear_down("36");
 }
 
 #[derive(Debug, Hash)]

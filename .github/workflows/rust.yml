@@ -14,15 +14,19 @@ env:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        java-version: [ 8, 11, 14 ]
+        zk-version: [ 3.4.14, 3.5.9, 3.6.3, 3.7.0 ]
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
-      - name: Run a one-line script
-        run: echo Rust buruma!
-      - name: Build
-        run: cargo build --verbose
-      - name: Clippy
-        run: cargo clippy
-      - name: Run tests
-        run: cargo test --verbose
+      - name: Setup Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: ${{ matrix.java-version }}
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Test code
+        run: make test ZK_VERSION=${{ matrix.zk-version }}
