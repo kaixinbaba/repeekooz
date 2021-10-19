@@ -1,14 +1,6 @@
-# make file to hold the logic of build and test setup
 ZK_VERSION ?= 3.5.6
 
-# Apache changed the name of the archive in version 3.5.x and seperated out
-# src and binary packages
-ZK_MINOR_VER=$(word 2, $(subst ., ,$(ZK_VERSION)))
-ifeq ($(shell test $(ZK_MINOR_VER) -le 4; echo $$?),0)
-  ZK = zookeeper-$(ZK_VERSION)
-else
-  ZK = apache-zookeeper-$(ZK_VERSION)-bin
-endif
+ZK = apache-zookeeper-$(ZK_VERSION)-bin
 ZK_URL = "https://archive.apache.org/dist/zookeeper/zookeeper-$(ZK_VERSION)/$(ZK).tar.gz"
 
 
@@ -20,8 +12,6 @@ $(ZK):
 	rm $(ZK).tar.gz
 
 zookeeper: #$(ZK)
-	# we link to a standard directory path so then the tests dont need to find based on version
-	# in the test code. this allows backward compatable testing.
 	mv $(ZK)/conf/zoo_sample.cfg $(ZK)/conf/zoo.cfg
 	$(ZK)/bin/zkServer.sh start
 
