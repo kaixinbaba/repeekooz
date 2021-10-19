@@ -22,9 +22,8 @@ $(ZK):
 zookeeper: #$(ZK)
 	# we link to a standard directory path so then the tests dont need to find based on version
 	# in the test code. this allows backward compatable testing.
-	ln -s $(ZK) zookeeper
-	mv zookeeper/conf/zoo_sample.cfg zookeeper/conf/zoo.cfg
-	zookeeper/bin/zkServer.sh start
+	mv $(ZK)/conf/zoo_sample.cfg $(ZK)/conf/zoo.cfg
+	$(ZK)/bin/zkServer.sh start
 
 .PHONY: setup
 setup: zookeeper
