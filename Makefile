@@ -1,4 +1,4 @@
-ZK_VERSION ?= 3.5.6
+ZK_VERSION ?= 3.7.0
 
 # Apache changed the name of the archive in version 3.5.x and seperated out
 # src and binary packages
@@ -37,7 +37,7 @@ build:
 
 .PHONY: test
 test: build zookeeper
-	cargo test
+	cargo test --test test_$(ZK_VERSION)
 
 .PHONY: clean
 clean:
