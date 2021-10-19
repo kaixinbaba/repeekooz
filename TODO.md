@@ -56,3 +56,4 @@
 - [ ] removeAllWatches
 - [ ] addWatch
 - [ ] getState
+
