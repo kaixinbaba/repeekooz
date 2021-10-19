@@ -11,7 +11,7 @@ $(ZK):
 	tar -zxf $(ZK).tar.gz
 	rm $(ZK).tar.gz
 
-zookeeper: #$(ZK)
+zookeeper: $(ZK)
 	mv $(ZK)/conf/zoo_sample.cfg $(ZK)/conf/zoo.cfg
 	$(ZK)/bin/zkServer.sh start
 
