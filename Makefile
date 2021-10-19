@@ -38,7 +38,7 @@ build:
 
 .PHONY: test
 test: build zookeeper
-	cargo test --test test_$(ZK_FILE_VERSION)
+	cargo test --test test_${ZK_FILE_VERSION}
 
 .PHONY: clean
 clean:
