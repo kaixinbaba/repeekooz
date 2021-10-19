@@ -11,11 +11,8 @@ use buruma::{CreateMode, Scheme};
 use buruma::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
 use crate::common::DEFAULT_ZK_SERVER;
 
-mod common;
-
 #[tokio::test]
-async fn basic_zk36() {
-    // common::set_up("36").await;
+async fn full_test() {
     let basic_path = "/buruma";
     let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(6))
         .await
@@ -89,13 +86,6 @@ async fn basic_zk36() {
         scheme: Scheme::World,
     }];
     assert_eq!(vec, acl_list);
-
-    // delete
-    zk.delete(basic_path).await.unwrap();
-
-
-    // tearDown
-    // common::tear_down("36");
 }
 
 #[derive(Debug, Hash)]
