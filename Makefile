@@ -16,8 +16,6 @@ ZK_URL = "https://archive.apache.org/dist/zookeeper/zookeeper-$(ZK_VERSION)/$(ZK
 .DEFAULT_GOAL := test
 
 $(ZK):
-	echo $(ZK_VERSION)
-	echo $(ZK_FILE_VERSION)
 	curl -o $(ZK).tar.gz $(ZK_URL)
 	tar -zxf $(ZK).tar.gz
 	rm $(ZK).tar.gz
@@ -41,7 +39,7 @@ build:
 
 .PHONY: test
 test: build zookeeper
-	cargo test --test test_${ZK_FILE_VERSION}
+	cargo test --test test_$(ZK_FILE_VERSION)
 
 .PHONY: clean
 clean:
