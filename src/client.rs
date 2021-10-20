@@ -1,9 +1,12 @@
 extern crate chrono;
 
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::AtomicI32;
+use std::sync::atomic::Ordering::Release;
 
 use bytes::{Buf, BufMut, BytesMut};
 use chrono::prelude::*;
+use futures_timer::Delay;
 use tokio::io::{self, ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio::prelude::*;
@@ -11,16 +14,14 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::Duration;
 
-use crate::constants::{Error, OpCode, States, XidType};
-use crate::metric::Metrics;
-use crate::protocol::req::{ConnectRequest, ReqPacket, RequestHeader, DEATH_PTYPE};
-use crate::protocol::resp::{ConnectResponse, ReplyHeader, WatcherEvent};
-use crate::protocol::{Deserializer, Serializer};
-use crate::watcher::WatcherManager;
 use crate::{WatchedEvent, Watcher, ZKError, ZKResult};
-use futures_timer::Delay;
-use std::sync::atomic::AtomicI32;
-use std::sync::atomic::Ordering::Release;
+use crate::constants::{OpCode, States, XidType};
+use crate::error::ServerErrorCode;
+use crate::metric::Metrics;
+use crate::protocol::{Deserializer, Serializer};
+use crate::protocol::req::{ConnectRequest, DEATH_PTYPE, ReqPacket, RequestHeader};
+use crate::protocol::resp::{ConnectResponse, ReplyHeader, WatcherEvent};
+use crate::watcher::WatcherManager;
 
 struct SenderTask {
     packet_rx: Receiver<ReqPacket>,
@@ -186,30 +187,21 @@ impl HostProvider {
     fn validate_host(host: &str) -> ZKResult<String> {
         let ip_port = host.split(":").collect::<Vec<&str>>();
         if ip_port.len() != 2 {
-            return Err(ZKError(
-                Error::BadArguments,
-                "Invalid host address format must be 'ip:port'",
-            ));
+            return Err(ZKError::ArgumentError("host".into(), "Host Address format must be 'ip:port'".into()));
         }
         match ip_port.get(1).unwrap().parse::<usize>() {
             Ok(port) if port <= 65535 => port,
             _ => {
-                return Err(ZKError(
-                    Error::BadArguments,
-                    "Invalid port, must be number and less than 65535",
-                ));
+                return Err(ZKError::ArgumentError("port".into(), "Port must be number and less than 65535".into()));
             }
         };
 
         for ip in ip_port.get(0).unwrap().split(".") {
             match ip.parse::<usize>() {
                 Ok(i) if i > 255 => {
-                    return Err(ZKError(
-                        Error::BadArguments,
-                        "ip address must between 0 and 255",
-                    ));
+                    return Err(ZKError::ArgumentError("ip".into(), "ip address must between 0 and 255".into()));
                 }
-                Err(_) => return Err(ZKError(Error::BadArguments, "Invalid ip, must be number")),
+                Err(_) => return Err(ZKError::ArgumentError("ip".into(), "Invalid ip, must be number".into())),
                 _ => (),
             }
         }
@@ -219,7 +211,7 @@ impl HostProvider {
     pub(self) fn new(connect_string: &str) -> ZKResult<(HostProvider, String)> {
         let split_chroot = connect_string.split("/").collect::<Vec<&str>>();
         if split_chroot.len() > 2 {
-            return Err(ZKError(Error::BadArguments, "Invalid chroot format"));
+            return Err(ZKError::ArgumentError("host with chroot".into(), "chroot format must be like 'ip:port/chroot'".into()));
         }
         let mut server_list = Vec::new();
         for add in split_chroot.get(0).unwrap().split(",") {
@@ -326,7 +318,7 @@ impl Client {
         let (mut host_provider, chroot) = HostProvider::new(connect_string)?;
         let socket = match TcpStream::connect(host_provider.pick_host()).await {
             Ok(socket) => socket,
-            Err(_e) => return Err(ZKError(Error::BadArguments, "socket error")),
+            Err(_e) => return Err(ZKError::NetworkError),
         };
 
         let (reader, writer) = io::split(socket);
@@ -413,19 +405,17 @@ impl Client {
         let buf = match self.buf_rx.recv().await {
             Some((reply_header, buf)) => {
                 if reply_header.err != 0 {
-                    return Err(ZKError(
-                        Error::from(reply_header.err),
-                        "occur error from server",
-                    ));
+                    return Err(ZKError::ServerError(ServerErrorCode::from(reply_header.err), reply_header.err));
                 }
                 if let Some(xid) = xid {
                     if reply_header.xid != xid {
-                        return Err(ZKError(Error::ConnectionLoss, "Xid in RequestHeader != Xid in ReplyHeader, maybe occur connection loss"));
+                        return Err(ZKError::ServerError(ServerErrorCode::ConnectionLoss, reply_header.err));
                     }
                 }
                 buf
             }
-            _ => return Err(ZKError(Error::ReadSocketError, "occur error from server")),
+            _ => return Err(ZKError::UnknownError),
+
         };
         Ok(buf)
     }
@@ -477,7 +467,7 @@ impl Client {
         D: Deserializer,
     {
         if !self.state.is_connected() {
-            return Err(ZKError(Error::ConnectionLoss, "client may be closed"));
+            return Err(ZKError::NetworkError);
         }
         let xid = self.write_buf(rh, req).await?;
         let mut buf = self.read_buf(xid).await?;

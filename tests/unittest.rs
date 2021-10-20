@@ -162,3 +162,9 @@ async fn add_watch() {
     info!("{:?}", x);
     Delay::new(Duration::from_secs(120)).await;
 }
+
+
+#[test]
+fn test_from_string() {
+    println!("hello")
+}

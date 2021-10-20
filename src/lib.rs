@@ -44,20 +44,21 @@
 //! ```
 
 #[macro_use]
+extern crate cmd_lib;
+#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate cmd_lib;
 
 // re-export, 常用的结构体全部都要导出，使得用户可以直接通过 buruma 直接引用
 pub use api::ZooKeeper;
 pub use constants::{AddWatchMode, CreateMode, EventType, KeeperState, States, WatcherType};
-pub use protocol::req::{Scheme, ACL};
+pub use error::ZKError;
+pub use protocol::req::{ACL, Scheme};
 pub use protocol::resp::Stat;
 pub use watcher::{WatchedEvent, Watcher};
 
-use crate::constants::Error;
+use anyhow::Result;
 
 mod api;
 mod client;
@@ -67,8 +68,5 @@ mod paths;
 mod protocol;
 mod watcher;
 mod error;
-
-#[derive(Debug)]
-pub struct ZKError(Error, &'static str);
 
 pub type ZKResult<T> = Result<T, ZKError>;

@@ -219,93 +219,6 @@ impl From<i32> for XidType {
     }
 }
 
-/// buruma 常见错误
-#[derive(Debug, Eq, PartialEq)]
-pub enum Error {
-    // customer error
-    ReadSocketError = 100,
-    WriteSocketError = 101,
-    RequestSerializeError = 102,
-    ResponseDeserializeError = 103,
-
-    SystemError = -1,
-    RuntimeInconsistency = -2,
-    DataInconsistency = -3,
-    ConnectionLoss = -4,
-    MarshallingError = -5,
-    Unimplemented = -6,
-    OperationTimeout = -7,
-    BadArguments = -8,
-    UnknownSession = -12,
-    NewConfigNoQuorum = -13,
-    ReConfigInProgress = -14,
-    APIError = -100,
-    NoNode = -101,
-    NoAuth = -102,
-    BadVersion = -103,
-    NoChildrenForEphemerals = -108,
-    NodeExists = -110,
-    NotEmpty = -111,
-    SessionExpired = -112,
-    InvalidCallback = -113,
-    InvalidACL = -114,
-    AuthFailed = -115,
-    SessionMoved = -118,
-    NotReadonly = -119,
-    EphemeralOnLocalSession = -120,
-    NoWatcher = -121,
-    RequestTimeout = -122,
-    ReConfigDisabled = -123,
-    SessionClosedRequireSASLAuth = -124,
-}
-impl From<i32> for Error {
-    fn from(code: i32) -> Self {
-        Self::from(code as isize)
-    }
-}
-
-impl From<isize> for Error {
-    fn from(code: isize) -> Self {
-        match code {
-            100 => Error::ReadSocketError,
-            101 => Error::WriteSocketError,
-            102 => Error::RequestSerializeError,
-            103 => Error::ResponseDeserializeError,
-
-            -1 => Error::SystemError,
-            -2 => Error::RuntimeInconsistency,
-            -3 => Error::DataInconsistency,
-            -4 => Error::ConnectionLoss,
-            -5 => Error::MarshallingError,
-            -6 => Error::Unimplemented,
-            -7 => Error::OperationTimeout,
-            -8 => Error::BadArguments,
-            -12 => Error::UnknownSession,
-            -13 => Error::NewConfigNoQuorum,
-            -14 => Error::ReConfigInProgress,
-            -100 => Error::APIError,
-            -101 => Error::NoNode,
-            -102 => Error::NoAuth,
-            -103 => Error::BadVersion,
-            -108 => Error::NoChildrenForEphemerals,
-            -110 => Error::NodeExists,
-            -111 => Error::NotEmpty,
-            -112 => Error::SessionExpired,
-            -113 => Error::InvalidCallback,
-            -114 => Error::InvalidACL,
-            -115 => Error::AuthFailed,
-            -118 => Error::SessionMoved,
-            -119 => Error::NotReadonly,
-            -120 => Error::EphemeralOnLocalSession,
-            -121 => Error::NoWatcher,
-            -122 => Error::RequestTimeout,
-            -123 => Error::ReConfigDisabled,
-            -124 => Error::SessionClosedRequireSASLAuth,
-            _ => Error::SystemError,
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -324,10 +237,5 @@ mod test {
         assert_eq!(Perms::Delete as isize, 8);
         assert_eq!(Perms::ACL as isize, 16);
         assert_eq!(Perms::All as isize, 31);
-    }
-
-    #[test]
-    fn test_error() {
-        assert_eq!(Error::from(100), Error::ReadSocketError);
     }
 }

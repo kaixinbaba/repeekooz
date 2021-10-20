@@ -5,11 +5,13 @@ use std::time::Duration;
 
 use bytes::BytesMut;
 
+use crate::{paths, WatchedEvent, WatcherType, ZKError, ZKResult};
 use crate::client::Client;
-use crate::constants::{AddWatchMode, CreateMode, Error, OpCode, States, IGNORE_VERSION};
+use crate::constants::{AddWatchMode, CreateMode, IGNORE_VERSION, OpCode, States};
+use crate::error::ServerErrorCode;
 use crate::protocol::req::{
-    AddWatchRequest, CheckWatchesRequest, CreateRequest, DeleteRequest, PathAndWatchRequest,
-    PathRequest, RequestHeader, SetACLRequest, SetDataRequest, ACL,
+    ACL, AddWatchRequest, CheckWatchesRequest, CreateRequest, DeleteRequest,
+    PathAndWatchRequest, PathRequest, RequestHeader, SetACLRequest, SetDataRequest,
 };
 use crate::protocol::resp::{
     CreateResponse, DummyResponse, GetACLResponse, GetAllChildrenNumberResponse,
@@ -17,7 +19,6 @@ use crate::protocol::resp::{
 };
 use crate::protocol::Serializer;
 use crate::watcher::Watcher;
-use crate::{paths, WatchedEvent, WatcherType, ZKError, ZKResult};
 
 /// 整个模块的 API 入口对象
 #[derive(Debug)]
@@ -274,7 +275,7 @@ impl ZooKeeper {
         match self.client.submit_request(rh, req, resp).await {
             Ok(resp) => Ok(Some(resp.stat)),
             Err(e) => match e {
-                ZKError(Error::NoNode, _) => Ok(None),
+                ZKError::ServerError(ServerErrorCode::NoNode, _) => Ok(None),
                 _ => {
                     return Err(e);
                 }
