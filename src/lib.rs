@@ -66,6 +66,7 @@ mod metric;
 mod paths;
 mod protocol;
 mod watcher;
+mod error;
 
 #[derive(Debug)]
 pub struct ZKError(Error, &'static str);
