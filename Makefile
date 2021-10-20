@@ -1,5 +1,4 @@
 ZK_VERSION ?= 3.7.0
-ZK_FILE_VERSION=$(echo ${ZK_VERSION} | sed 's/\.//g')
 
 # Apache changed the name of the archive in version 3.5.x and seperated out
 # src and binary packages
@@ -9,12 +8,16 @@ ifeq ($(shell test $(ZK_MINOR_VER) -le 4; echo $$?),0)
 else
   ZK = apache-zookeeper-$(ZK_VERSION)-bin
 endif
+
+ZK_FILE_VERSION=$(echo ${ZK_VERSION} | sed 's/\.//g')
 ZK_URL = "https://archive.apache.org/dist/zookeeper/zookeeper-$(ZK_VERSION)/$(ZK).tar.gz"
 
 
 .DEFAULT_GOAL := test
 
 $(ZK):
+	echo $(ZK_VERSION)
+	echo $(ZK_FILE_VERSION)
 	curl -o $(ZK).tar.gz $(ZK_URL)
 	tar -zxf $(ZK).tar.gz
 	rm $(ZK).tar.gz
