@@ -18,14 +18,14 @@ impl RequestHeader {
     pub(crate) fn new(rtype: OpCode) -> RequestHeader {
         RequestHeader {
             xid: 0,
-            rtype: rtype as i32,
+            rtype: rtype.into(),
         }
     }
 
     pub(crate) fn new_full(xid: i32, rtype: OpCode) -> RequestHeader {
         RequestHeader {
             xid,
-            rtype: rtype as i32,
+            rtype: rtype.into(),
         }
     }
 }
@@ -99,13 +99,13 @@ impl From<(String, String)> for Scheme {
 #[derive(Debug, Eq, PartialEq)]
 pub struct ACL {
     // TODO 该字段应该也是枚举对象或者其他有意义的类型，而不是 u32
-    pub perms: u32,
+    pub perms: i32,
     pub scheme: Scheme,
 }
 
 impl Serializer for ACL {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
-        self.write_u32(self.perms, b);
+        self.write_i32(self.perms, b);
         match &self.scheme {
             Scheme::World => {
                 self.write_string(WORLD, b);
@@ -126,7 +126,7 @@ impl Serializer for ACL {
 
 impl Deserializer for ACL {
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
-        self.perms = self.read_u32(b);
+        self.perms = self.read_i32(b);
         let scheme = self.read_string(b);
         let id = self.read_string(b);
         self.scheme = Scheme::from((scheme, id));
@@ -137,7 +137,7 @@ impl Deserializer for ACL {
 impl Default for ACL {
     fn default() -> Self {
         ACL {
-            perms: Perms::All as u32,
+            perms: Perms::All.into(),
             scheme: Scheme::World,
         }
     }
@@ -175,7 +175,7 @@ impl CreateRequest {
             path: String::from(path),
             data: None,
             acl: ACL::world_acl(),
-            flags: CreateMode::Persistent as i32,
+            flags: CreateMode::Persistent.into(),
         }
     }
 
@@ -193,7 +193,7 @@ impl CreateRequest {
             path,
             data,
             acl,
-            flags: create_mode as i32,
+            flags: create_mode.into(),
         }
     }
 }
@@ -332,13 +332,13 @@ impl SetACLRequest {
 #[derive(Debug, Default)]
 pub(crate) struct AddWatchRequest {
     path: String,
-    mode: u32,
+    mode: i32,
 }
 
 impl Serializer for AddWatchRequest {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
         self.write_string(self.path.as_str(), b);
-        self.write_u32(self.mode, b);
+        self.write_i32(self.mode, b);
         Ok(())
     }
 }
@@ -347,7 +347,7 @@ impl AddWatchRequest {
     pub(crate) fn new(path: String, mode: AddWatchMode) -> Self {
         AddWatchRequest {
             path,
-            mode: mode as u32,
+            mode: mode.into(),
         }
     }
 }
@@ -355,13 +355,13 @@ impl AddWatchRequest {
 #[derive(Debug, Default)]
 pub(crate) struct CheckWatchesRequest {
     path: String,
-    watcher_type: u32,
+    watcher_type: i32,
 }
 
 impl Serializer for CheckWatchesRequest {
     fn write(&self, b: &mut BytesMut) -> ZKResult<()> {
         self.write_string(self.path.as_str(), b);
-        self.write_u32(self.watcher_type, b);
+        self.write_i32(self.watcher_type, b);
         Ok(())
     }
 }
@@ -370,7 +370,7 @@ impl CheckWatchesRequest {
     pub(crate) fn new(path: String, watcher_type: WatcherType) -> Self {
         CheckWatchesRequest {
             path,
-            watcher_type: watcher_type as u32,
+            watcher_type: watcher_type.into(),
         }
     }
 }

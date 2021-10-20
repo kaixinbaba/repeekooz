@@ -6,16 +6,25 @@
 /// `ACL`： 可读写 ACL 数据
 /// `All`： 所有以上权限
 pub enum Perms {
-    Read = 1 << 0,
-    Write = 1 << 1,
-    Create = 1 << 2,
-    Delete = 1 << 3,
-    ACL = 1 << 4,
-    All = Perms::Read as isize
-        | Perms::Write as isize
-        | Perms::Create as isize
-        | Perms::Delete as isize
-        | Perms::ACL as isize,
+    Read,
+    Write,
+    Create,
+    Delete,
+    ACL,
+    All,
+}
+
+impl From<Perms> for i32 {
+    fn from(perms: Perms) -> Self {
+        match perms {
+            Perms::Read => 1 << 0,
+            Perms::Write => 1 << 1,
+            Perms::Create => 1 << 2,
+            Perms::Delete => 1 << 3,
+            Perms::ACL => 1 << 4,
+            Perms::All => 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3 | 1 << 4 | 1 << 5,
+        }
+    }
 }
 
 /// world scheme
@@ -32,28 +41,60 @@ pub const ANYONE: &str = "anyone";
 pub const IGNORE_VERSION: i32 = -1;
 
 pub enum WatcherType {
-    Children = 1,
-    Data = 2,
-    Any = 3,
+    Children,
+    Data,
+    Any,
 }
+
+impl From<WatcherType> for i32 {
+    fn from(watch_type: WatcherType) -> Self {
+        match watch_type {
+            WatcherType::Children => 1,
+            WatcherType::Data => 2,
+            WatcherType::Any => 3,
+        }
+    }
+}
+
 /// 回调的事件类型
 #[derive(Debug)]
 pub enum EventType {
-    None = -1,
+    None,
     /// 节点创建
-    NodeCreated = 1,
+    NodeCreated,
     /// 节点删除
-    NodeDeleted = 2,
+    NodeDeleted,
     /// 节点数据变更
-    NodeDataChanged = 3,
+    NodeDataChanged,
     /// 节点子节点列表变更
-    NodeChildrenChanged = 4,
+    NodeChildrenChanged,
     /// 节点数据的 Watcher 监听被移除
-    DataWatchRemoved = 5,
+    DataWatchRemoved,
     /// 节点子节点的 Watcher 监听被移除
-    ChildWatchRemoved = 6,
+    ChildWatchRemoved,
     /// 持久的 Watcher 监听被移除
-    PersistentWatchRemoved = 7,
+    PersistentWatchRemoved,
+}
+
+impl From<EventType> for isize {
+    fn from(event_type: EventType) -> Self {
+        match event_type {
+            EventType::None => -1,
+            EventType::NodeCreated => 1,
+            EventType::NodeDeleted => 2,
+            EventType::NodeDataChanged => 3,
+            EventType::NodeChildrenChanged => 4,
+            EventType::DataWatchRemoved => 5,
+            EventType::ChildWatchRemoved => 6,
+            EventType::PersistentWatchRemoved => 7,
+        }
+    }
+}
+
+impl From<i32> for EventType {
+    fn from(code: i32) -> Self {
+        EventType::from(code as isize)
+    }
 }
 
 impl From<isize> for EventType {
@@ -76,19 +117,39 @@ impl From<isize> for EventType {
 #[derive(Debug, Eq, PartialEq)]
 pub enum KeeperState {
     /// 未连接
-    Disconnected = 0,
+    Disconnected,
     /// 同步完成
-    SyncConnected = 3,
+    SyncConnected,
     /// 鉴权失败
-    AuthFailed = 4,
+    AuthFailed,
     /// 以只读状态连接
-    ConnectedReadOnly = 5,
+    ConnectedReadOnly,
     /// SASL 验证通过
-    SaslAuthenticated = 6,
+    SaslAuthenticated,
     /// 会话过期
-    Expired = -112,
+    Expired,
     /// 关闭
-    Closed = 7,
+    Closed,
+}
+
+impl From<KeeperState> for isize {
+    fn from(keeper_state: KeeperState) -> Self {
+        match keeper_state {
+            KeeperState::Disconnected => 0,
+            KeeperState::SyncConnected => 3,
+            KeeperState::AuthFailed => 4,
+            KeeperState::ConnectedReadOnly => 5,
+            KeeperState::SaslAuthenticated => 6,
+            KeeperState::Expired => -112,
+            KeeperState::Closed => 7,
+        }
+    }
+}
+
+impl From<i32> for KeeperState {
+    fn from(code: i32) -> Self {
+        KeeperState::from(code as isize)
+    }
 }
 
 impl From<isize> for KeeperState {
@@ -108,8 +169,17 @@ impl From<isize> for KeeperState {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum AddWatchMode {
-    Persistent = 0,
-    PersistentRecursive = 1,
+    Persistent,
+    PersistentRecursive,
+}
+
+impl From<AddWatchMode> for i32 {
+    fn from(add_watch_mode: AddWatchMode) -> Self {
+        match add_watch_mode {
+            AddWatchMode::Persistent => 0,
+            AddWatchMode::PersistentRecursive => 1,
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -134,38 +204,77 @@ impl States {
 }
 
 pub(crate) enum OpCode {
-    Notification = 0,
-    Create = 1,
-    Delete = 2,
-    Exists = 3,
-    GetData = 4,
-    SetData = 5,
-    GetACL = 6,
-    SetACL = 7,
-    GetChildren = 8,
-    Sync = 9,
-    Ping = 11,
-    GetChildren2 = 12,
-    Check = 13,
-    Multi = 14,
-    Create2 = 15,
-    ReConfig = 16,
-    CheckWatches = 17,
-    RemoveWatches = 18,
-    CreateContainer = 19,
-    DeleteContainer = 20,
-    CreateTTL = 21,
-    MultiRead = 22,
-    Auth = 100,
-    SetWatches = 101,
-    Sasl = 102,
-    GetEphemerals = 103,
-    GetAllChildrenNumber = 104,
-    SetWatches2 = 105,
-    AddWatch = 106,
-    CreateSession = -10,
-    CloseSession = -11,
-    Error = -1,
+    Notification,
+    Create,
+    Delete,
+    Exists,
+    GetData,
+    SetData,
+    GetACL,
+    SetACL,
+    GetChildren,
+    Sync,
+    Ping,
+    GetChildren2,
+    Check,
+    Multi,
+    Create2,
+    ReConfig,
+    CheckWatches,
+    RemoveWatches,
+    CreateContainer,
+    DeleteContainer,
+    CreateTTL,
+    MultiRead,
+    Auth,
+    SetWatches,
+    Sasl,
+    GetEphemerals,
+    GetAllChildrenNumber,
+    SetWatches2,
+    AddWatch,
+    CreateSession,
+    CloseSession,
+    Error,
+}
+
+impl From<OpCode> for i32 {
+    fn from(code: OpCode) -> Self {
+        match code {
+            OpCode::Notification => 0,
+            OpCode::Create => 1,
+            OpCode::Delete => 2,
+            OpCode::Exists => 3,
+            OpCode::GetData => 4,
+            OpCode::SetData => 5,
+            OpCode::GetACL => 6,
+            OpCode::SetACL => 7,
+            OpCode::GetChildren => 8,
+            OpCode::Sync => 9,
+            OpCode::Ping => 11,
+            OpCode::GetChildren2 => 12,
+            OpCode::Check => 13,
+            OpCode::Multi => 14,
+            OpCode::Create2 => 15,
+            OpCode::ReConfig => 16,
+            OpCode::CheckWatches => 17,
+            OpCode::RemoveWatches => 18,
+            OpCode::CreateContainer => 19,
+            OpCode::DeleteContainer => 20,
+            OpCode::CreateTTL => 21,
+            OpCode::MultiRead => 22,
+            OpCode::Auth => 100,
+            OpCode::SetWatches => 101,
+            OpCode::Sasl => 102,
+            OpCode::GetEphemerals => 103,
+            OpCode::GetAllChildrenNumber => 104,
+            OpCode::SetWatches2 => 105,
+            OpCode::AddWatch => 106,
+            OpCode::CreateSession => -10,
+            OpCode::CloseSession => -11,
+            OpCode::Error => -1,
+        }
+    }
 }
 
 pub enum OpKind {
@@ -177,19 +286,19 @@ pub enum OpKind {
 #[derive(Debug, Eq, PartialEq)]
 pub enum CreateMode {
     /// 持久节点
-    Persistent = 0,
+    Persistent,
     /// 临时节点，生命周期同客户端会话
-    Ephemeral = 1,
+    Ephemeral,
     /// 持久顺序节点，自动添加自增序号后缀
-    PersistentSequential = 2,
+    PersistentSequential,
     /// 临时顺序节点，自动添加自增序号后缀
-    EphemeralSequential = 3,
+    EphemeralSequential,
     /// 容器节点
-    Container = 4,
+    Container,
     /// 带超时时间的持久节点
-    PersistentWithTTL = 5,
+    PersistentWithTTL,
     /// 带超时时间的持久顺序节点
-    PersistentSequentialWithTTL = 6,
+    PersistentSequentialWithTTL,
 }
 
 impl CreateMode {
@@ -198,17 +307,55 @@ impl CreateMode {
     }
 }
 
+
+impl From<CreateMode> for i32 {
+    fn from(create_mode: CreateMode) -> Self {
+        isize::from(create_mode) as i32
+    }
+}
+impl From<CreateMode> for isize {
+    fn from(create_mode: CreateMode) -> Self {
+        match create_mode {
+            CreateMode::Persistent => 0,
+            CreateMode::Ephemeral => 1,
+            CreateMode::PersistentSequential => 2,
+            CreateMode::EphemeralSequential => 3,
+            CreateMode::Container => 4,
+            CreateMode::PersistentWithTTL => 5,
+            CreateMode::PersistentSequentialWithTTL => 6,
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) enum XidType {
-    Notification = -1,
-    Ping = -2,
-    AuthPacket = -4,
-    SetWatches = -8,
+    Notification,
+    Ping,
+    AuthPacket,
+    SetWatches,
     Response,
+}
+
+impl From<XidType> for i32 {
+    fn from(xid_type: XidType) -> Self {
+        match xid_type {
+            XidType::Notification => -1,
+            XidType::Ping => -2,
+            XidType::AuthPacket => -4,
+            XidType::SetWatches => -8,
+            XidType::Response => 0,
+        }
+    }
 }
 
 impl From<i32> for XidType {
     fn from(code: i32) -> Self {
+        XidType::from(code as isize)
+    }
+}
+
+impl From<isize> for XidType {
+    fn from(code: isize) -> Self {
         match code {
             -1 => XidType::Notification,
             -2 => XidType::Ping,
@@ -224,18 +371,8 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_static_constant() {
-        assert_eq!("world", WORLD);
-        assert_eq!("anyone", ANYONE);
-    }
-
-    #[test]
-    fn test_perms() {
-        assert_eq!(Perms::Read as isize, 1);
-        assert_eq!(Perms::Write as isize, 2);
-        assert_eq!(Perms::Create as isize, 4);
-        assert_eq!(Perms::Delete as isize, 8);
-        assert_eq!(Perms::ACL as isize, 16);
-        assert_eq!(Perms::All as isize, 31);
+    fn test_as() {
+        let code: u32 = WatcherType::Any.into();
+        println!("{}", code);
     }
 }

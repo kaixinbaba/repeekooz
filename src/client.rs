@@ -150,7 +150,7 @@ struct PingTask {
 impl PingTask {
     fn create_ping_request(&self) -> ReqPacket {
         ReqPacket::new(
-            Some(RequestHeader::new_full(XidType::Ping as i32, OpCode::Ping)),
+            Some(RequestHeader::new_full(XidType::Ping.into(), OpCode::Ping)),
             None,
         )
     }

@@ -20,8 +20,8 @@ pub struct WatchedEvent {
 impl From<WatcherEvent> for WatchedEvent {
     fn from(server_event: WatcherEvent) -> Self {
         WatchedEvent {
-            keep_state: KeeperState::from(server_event.keep_state as isize),
-            event_type: EventType::from(server_event.event_type as isize),
+            keep_state: KeeperState::from(server_event.keep_state),
+            event_type: server_event.event_type.into(),
             path: server_event.path,
         }
     }
@@ -147,7 +147,7 @@ impl WatcherManager {
         match event.event_type {
             EventType::None => {
                 let clear =
-                    self.disable_auto_watch_reset && event.keep_state != KeeperState::SyncConnected;
+                    self.disable_auto_watch_reset && event.keep_state.ne(&KeeperState::SyncConnected);
                 // data_watches
                 for (_, v) in self.data_watches.lock().unwrap().iter_mut() {
                     watchers.append(v);
