@@ -9,7 +9,7 @@ else
   ZK = apache-zookeeper-$(ZK_VERSION)-bin
 endif
 
-ZK_FILE_VERSION=$(echo ${ZK_VERSION} | sed 's/\.//g')
+ZK_FILE_VERSION=`echo ${ZK_VERSION} | sed 's/\.//g'`
 ZK_URL = "https://archive.apache.org/dist/zookeeper/zookeeper-$(ZK_VERSION)/$(ZK).tar.gz"
 
 
