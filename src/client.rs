@@ -414,7 +414,7 @@ impl Client {
             Some((reply_header, buf)) => {
                 if reply_header.err != 0 {
                     return Err(ZKError(
-                        Error::from(reply_header.err as isize),
+                        Error::from(reply_header.err),
                         "occur error from server",
                     ));
                 }

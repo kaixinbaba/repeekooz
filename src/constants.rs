@@ -258,6 +258,11 @@ pub enum Error {
     ReConfigDisabled = -123,
     SessionClosedRequireSASLAuth = -124,
 }
+impl From<i32> for Error {
+    fn from(code: i32) -> Self {
+        Self::from(code as isize)
+    }
+}
 
 impl From<isize> for Error {
     fn from(code: isize) -> Self {
