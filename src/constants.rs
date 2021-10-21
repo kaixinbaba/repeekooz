@@ -1,3 +1,4 @@
+#![allow(unused)]
 /// ZooKeeper 定义的 5 种权限
 /// `Read`： 节点可读
 /// `Write`： 节点可写

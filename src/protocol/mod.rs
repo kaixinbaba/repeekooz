@@ -1,3 +1,4 @@
+#![allow(unused)]
 use bytes::{Buf, BufMut, BytesMut};
 
 use crate::ZKResult;
@@ -45,7 +46,7 @@ pub trait Serializer: Send {
         b.put_u32(i as u32);
     }
 
-    fn write_vec<S>(&self, v: &Vec<S>, b: &mut BytesMut)
+    fn write_vec<S>(&self, v: &[S], b: &mut BytesMut)
     where
         S: Serializer,
     {

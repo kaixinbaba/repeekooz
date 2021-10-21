@@ -10,7 +10,7 @@ use crate::client::Client;
 use crate::constants::{AddWatchMode, CreateMode, IGNORE_VERSION, OpCode, States};
 use crate::error::ServerErrorCode;
 use crate::protocol::req::{
-    ACL, AddWatchRequest, CheckWatchesRequest, CreateRequest, DeleteRequest,
+    ACL, AddWatchRequest, CreateRequest, DeleteRequest,
     PathAndWatchRequest, PathRequest, RequestHeader, SetACLRequest, SetDataRequest,
 };
 use crate::protocol::resp::{
@@ -30,9 +30,7 @@ pub struct ZooKeeper {
 struct DummyWatcher;
 
 impl Watcher for DummyWatcher {
-    fn process(&self, _: &WatchedEvent) -> ZKResult<()> {
-        Ok(())
-    }
+    fn process(&self, _: &WatchedEvent) {}
 }
 
 impl ZooKeeper {
@@ -52,7 +50,7 @@ impl ZooKeeper {
     ///
     /// 无法连接服务端或者连接字符串格式有问题将会返回异常
     pub async fn new(connect_string: &str, session_timeout: Duration) -> ZKResult<ZooKeeper> {
-        pretty_env_logger::try_init();
+        pretty_env_logger::try_init()?;
         let client = Client::new(connect_string, session_timeout.as_millis() as u32).await?;
         Ok(ZooKeeper { client })
     }
@@ -93,7 +91,7 @@ impl ZooKeeper {
         let mut req = BytesMut::new();
         let request =
             CreateRequest::new_full(self.client.get_path(path), data, acl_list, create_model);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = CreateResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.path)
@@ -126,7 +124,7 @@ impl ZooKeeper {
         let rh = Some(RequestHeader::new(OpCode::Delete));
         let mut req = BytesMut::new();
         let request = DeleteRequest::new(self.client.get_path(path), version);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = IgnoreResponse::default();
         self.client.submit_request(rh, req, resp).await?;
         Ok(())
@@ -164,7 +162,7 @@ impl ZooKeeper {
         let rh = Some(RequestHeader::new(OpCode::SetData));
         let mut req = BytesMut::new();
         let request = SetDataRequest::new(self.client.get_path(path), data, version);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = SetDataResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.stat)
@@ -217,7 +215,7 @@ impl ZooKeeper {
             _ => false,
         };
         let request = PathAndWatchRequest::new(full_path, watch);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = GetDataResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         if let Some(s) = stat {
@@ -270,14 +268,14 @@ impl ZooKeeper {
             _ => false,
         };
         let request = PathAndWatchRequest::new(full_path, watch);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = SetDataResponse::default();
         match self.client.submit_request(rh, req, resp).await {
             Ok(resp) => Ok(Some(resp.stat)),
             Err(e) => match e {
                 ZKError::ServerError(ServerErrorCode::NoNode, _) => Ok(None),
                 _ => {
-                    return Err(e);
+                    Err(e)
                 }
             },
         }
@@ -327,7 +325,7 @@ impl ZooKeeper {
             _ => false,
         };
         let request = PathAndWatchRequest::new(full_path, watch);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = PathListResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.path_list)
@@ -382,7 +380,7 @@ impl ZooKeeper {
             _ => false,
         };
         let request = PathAndWatchRequest::new(full_path, watch);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = GetChildren2Response::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         *stat = resp.stat;
@@ -405,7 +403,7 @@ impl ZooKeeper {
         let mut req = BytesMut::new();
         let full_path = self.client.get_path(path);
         let request = PathRequest::new(full_path);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = GetAllChildrenNumberResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.total_number)
@@ -427,7 +425,7 @@ impl ZooKeeper {
         let mut req = BytesMut::new();
         // 不需要拼接 chroot
         let request = PathRequest::new(path.to_string());
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = PathListResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.path_list)
@@ -450,7 +448,7 @@ impl ZooKeeper {
         let mut req = BytesMut::new();
         let full_path = self.client.get_path(path);
         let request = PathRequest::new(full_path);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = GetACLResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         if let Some(s) = stat {
@@ -481,7 +479,7 @@ impl ZooKeeper {
         let mut req = BytesMut::new();
         let full_path = self.client.get_path(path);
         let request = SetACLRequest::new(full_path, acl_list, version);
-        request.write(&mut req);
+        request.write(&mut req)?;
         let resp = SetDataResponse::default();
         let resp = self.client.submit_request(rh, req, resp).await?;
         Ok(resp.stat)
@@ -513,7 +511,7 @@ impl ZooKeeper {
             mode == AddWatchMode::PersistentRecursive,
         )?;
         let request = AddWatchRequest::new(full_path, mode);
-        request.write(&mut req);
+        request.write(&mut req)?;
         self.client
             .submit_request(rh, req, DummyResponse::default())
             .await?;
@@ -531,6 +529,7 @@ impl ZooKeeper {
     /// - `watcher`： 回调对象，必须实现 [`Watcher`] trait
     /// - `watcher_type`： 回调的类型，请查看 [`WatcherType`]
     /// - `local`：
+    #[allow(unused)]
     pub async fn remove_watches<W: Watcher + 'static>(
         &mut self,
         path: &str,
@@ -538,18 +537,7 @@ impl ZooKeeper {
         watcher_type: WatcherType,
         local: bool,
     ) -> ZKResult<()> {
-        paths::validate_path(path)?;
-        let rh = Some(RequestHeader::new(OpCode::CheckWatches));
-        let mut req = BytesMut::new();
-        let full_path = self.client.get_path(path);
-        // Java 中的 watchDeregistration 怎么实现
-        let request = CheckWatchesRequest::new(full_path, watcher_type);
-
-        request.write(&mut req);
-        self.client
-            .submit_request(rh, req, DummyResponse::default())
-            .await?;
-        Ok(())
+        todo!()
     }
 
     /// 获取客户端当前状态

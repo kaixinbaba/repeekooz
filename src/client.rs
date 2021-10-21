@@ -26,11 +26,12 @@ use crate::watcher::WatcherManager;
 struct SenderTask {
     packet_rx: Receiver<ReqPacket>,
     writer: WriteHalf<TcpStream>,
+    #[allow(unused)]
     metrics: Arc<Mutex<Metrics>>,
 }
 
 impl SenderTask {
-    pub(self) async fn run(&mut self) -> Result<(), io::Error> {
+    pub(self) async fn run(&mut self) -> ZKResult<()> {
         loop {
             let packet = match self.packet_rx.recv().await {
                 Some(packet) if packet.ptype != DEATH_PTYPE => packet,
@@ -42,13 +43,13 @@ impl SenderTask {
             };
             let mut buf = BytesMut::new();
             if let Some(rh) = packet.rh {
-                rh.write(&mut buf);
+                rh.write(&mut buf)?;
             }
             if let Some(req) = packet.req {
                 buf.extend(req);
             }
-            self.writer.write_buf(&mut Client::wrap_len_buf(buf)).await;
-            self.writer.flush().await;
+            self.writer.write_buf(&mut Client::wrap_len_buf(buf)).await?;
+            self.writer.flush().await?;
         }
     }
 }
@@ -65,11 +66,7 @@ impl ReceiverTask {
     async fn read_origin_buf(&mut self) -> BytesMut {
         // FIXME 1024 够吗
         let mut buf = BytesMut::with_capacity(1024);
-        loop {
-            let buf_size = match self.reader.read_buf(&mut buf).await {
-                Ok(buf_size) => buf_size,
-                _ => break,
-            };
+        while let Ok(buf_size) = self.reader.read_buf(&mut buf).await {
             if buf_size > 0 {
                 // skip first size
                 let len = buf.get_i32();
@@ -80,14 +77,14 @@ impl ReceiverTask {
         buf
     }
 
-    async fn handle_reply(&self, mut reply_header: ReplyHeader, mut buf: BytesMut) {
-        reply_header.read(&mut buf);
+    async fn handle_reply(&self, mut reply_header: ReplyHeader, mut buf: BytesMut) -> ZKResult<()> {
+        reply_header.read(&mut buf)?;
         // 区分不同的 xid
         match XidType::from(reply_header.xid) {
             XidType::Notification => {
                 let mut server_event = WatcherEvent::default();
-                server_event.read(&mut buf);
-                self.event_tx.send(WatchedEvent::from(server_event)).await;
+                server_event.read(&mut buf)?;
+                self.event_tx.send(WatchedEvent::from(server_event)).await?;
             }
             XidType::Ping => {
                 trace!("Received Ping from server");
@@ -96,22 +93,23 @@ impl ReceiverTask {
             XidType::SetWatches => {}
             XidType::Response => {
                 trace!("Received Response from server");
-                self.buf_tx.send((reply_header, buf)).await;
+                self.buf_tx.send((reply_header, buf)).await?;
             }
         }
+        Ok(())
     }
 
-    pub(self) async fn run(&mut self) -> Result<(), io::Error> {
+    pub(self) async fn run(&mut self) -> ZKResult<()> {
         loop {
             let buf = self.read_origin_buf().await;
             let reply_header = ReplyHeader::default();
 
             if !self.is_connected {
                 // connect response 没有 ReplyHeader
-                self.buf_tx.send((reply_header, buf)).await;
+                self.buf_tx.send((reply_header, buf)).await?;
                 self.is_connected = true;
             } else {
-                self.handle_reply(reply_header, buf).await;
+                self.handle_reply(reply_header, buf).await?;
             }
         }
     }
@@ -123,11 +121,11 @@ struct EventTask {
 }
 
 impl EventTask {
-    // async fn process_event(&self, event: WatchedEvent, watchers: Vec<Box<dyn Watcher>>) {
-    //     for w in watchers {
-    //         w.process(&event);
-    //     }
-    // }
+    async fn process_event(&self, event: WatchedEvent, watchers: Vec<Box<dyn Watcher>>) {
+        for w in watchers {
+            w.process(&event);
+        }
+    }
 
     pub(self) async fn run(&mut self) -> Result<(), io::Error> {
         loop {
@@ -135,8 +133,8 @@ impl EventTask {
                 Some(event) => event,
                 None => continue,
             };
-            let _watchers = self.watcher_manager.find_need_triggered_watchers(&event);
-            // self.process_event(event, watchers).await;
+            let watchers = self.watcher_manager.find_need_triggered_watchers(&event);
+            self.process_event(event, watchers).await;
         }
     }
 }
@@ -155,7 +153,7 @@ impl PingTask {
         )
     }
 
-    pub(self) async fn run(&mut self) -> Result<(), io::Error> {
+    pub(self) async fn run(&mut self) -> ZKResult<()> {
         let max_idle = 10000;
         loop {
             let idle_time =
@@ -167,7 +165,7 @@ impl PingTask {
             };
             if next_ping <= 0 || idle_time > max_idle {
                 // send_ping
-                self.packet_tx.send(self.create_ping_request()).await;
+                self.packet_tx.send(self.create_ping_request()).await?;
                 self.metrics.lock().unwrap().send_done();
             } else {
                 Delay::new(Duration::from_millis(self.read_timeout as u64)).await;
@@ -185,7 +183,7 @@ struct HostProvider {
 
 impl HostProvider {
     fn validate_host(host: &str) -> ZKResult<String> {
-        let ip_port = host.split(":").collect::<Vec<&str>>();
+        let ip_port = host.split(':').collect::<Vec<&str>>();
         if ip_port.len() != 2 {
             return Err(ZKError::ArgumentError("host".into(), "Host Address format must be 'ip:port'".into()));
         }
@@ -196,7 +194,7 @@ impl HostProvider {
             }
         };
 
-        for ip in ip_port.get(0).unwrap().split(".") {
+        for ip in ip_port.get(0).unwrap().split('.') {
             match ip.parse::<usize>() {
                 Ok(i) if i > 255 => {
                     return Err(ZKError::ArgumentError("ip".into(), "ip address must between 0 and 255".into()));
@@ -209,21 +207,21 @@ impl HostProvider {
     }
 
     pub(self) fn new(connect_string: &str) -> ZKResult<(HostProvider, String)> {
-        let split_chroot = connect_string.split("/").collect::<Vec<&str>>();
+        let split_chroot = connect_string.split('/').collect::<Vec<&str>>();
         if split_chroot.len() > 2 {
             return Err(ZKError::ArgumentError("host with chroot".into(), "chroot format must be like 'ip:port/chroot'".into()));
         }
         let mut server_list = Vec::new();
-        for add in split_chroot.get(0).unwrap().split(",") {
+        for add in split_chroot.get(0).unwrap().split(',') {
             match HostProvider::validate_host(add) {
                 Ok(s) => server_list.push(s),
                 Err(e) => return Err(e),
             }
         }
 
-        let mut chroot = String::from("/");
+        let mut chroot = String::from('/');
         if split_chroot.len() == 2 {
-            chroot = String::from("/".to_string() + *split_chroot.get(1).unwrap());
+            chroot = '/'.to_string() + *split_chroot.get(1).unwrap();
         }
         let server_len = server_list.len();
         Ok((
@@ -305,8 +303,8 @@ impl Client {
     pub(crate) fn get_path(&self, path: &str) -> String {
         let chroot = self.chroot.clone();
         let mut path = path.to_string();
-        if !path.starts_with("/") {
-            path = "/".to_string() + path.as_str();
+        if !path.starts_with('/') {
+            path = '/'.to_string() + path.as_str();
         }
         if chroot != "/" {
             path = chroot + path.as_str()
@@ -318,7 +316,7 @@ impl Client {
         let (mut host_provider, chroot) = HostProvider::new(connect_string)?;
         let socket = match TcpStream::connect(host_provider.pick_host()).await {
             Ok(socket) => socket,
-            Err(_e) => return Err(ZKError::NetworkError),
+            Err(_e) => return Err(ZKError::NetworkError("Connect to ZooKeeper server error!".into())),
         };
 
         let (reader, writer) = io::split(socket);
@@ -331,8 +329,8 @@ impl Client {
             metrics: metrics.clone(),
         };
         tokio::spawn(async move {
-            sender_task.run().await;
-            Ok::<_, io::Error>(())
+            sender_task.run().await?;
+            Ok::<_, ZKError>(())
         });
 
         let watcher_manager = Arc::new(WatcherManager::new(false));
@@ -344,8 +342,8 @@ impl Client {
             watcher_manager: watcher_manager.clone(),
         };
         tokio::spawn(async move {
-            event_task.run().await;
-            Ok::<_, io::Error>(())
+            event_task.run().await?;
+            Ok::<_, ZKError>(())
         });
 
         // start receive thread
@@ -360,8 +358,8 @@ impl Client {
             is_connected: false,
         };
         tokio::spawn(async move {
-            receiver_task.run().await;
-            Ok::<_, io::Error>(())
+            receiver_task.run().await?;
+            Ok::<_, ZKError>(())
         });
 
         let packet_tx_ping = Sender::clone(&packet_tx);
@@ -388,8 +386,8 @@ impl Client {
         };
 
         tokio::spawn(async move {
-            ping_task.run().await;
-            Ok::<_, io::Error>(())
+            ping_task.run().await?;
+            Ok::<_, ZKError>(())
         });
         Ok(client)
     }
@@ -397,7 +395,7 @@ impl Client {
     fn create_connect_request(&self, session_timeout: u32) -> ZKResult<BytesMut> {
         let mut buf = BytesMut::new();
         let connect_request = ConnectRequest::new(session_timeout);
-        connect_request.write(&mut buf);
+        connect_request.write(&mut buf)?;
         Ok(buf)
     }
 
@@ -433,7 +431,7 @@ impl Client {
             _ => None,
         };
         let packet = ReqPacket::new(rh, Some(req));
-        self.packet_tx.send(packet).await;
+        self.packet_tx.send(packet).await?;
         Ok(xid)
     }
 
@@ -467,11 +465,11 @@ impl Client {
         D: Deserializer,
     {
         if !self.state.is_connected() {
-            return Err(ZKError::NetworkError);
+            return Err(ZKError::NetworkError("Client connection is not ready!".into()));
         }
         let xid = self.write_buf(rh, req).await?;
         let mut buf = self.read_buf(xid).await?;
-        resp.read(&mut buf);
+        resp.read(&mut buf)?;
         Ok(resp)
     }
 

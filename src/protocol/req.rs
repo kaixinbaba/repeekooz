@@ -1,4 +1,3 @@
-use std::hash::Hasher;
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
@@ -185,10 +184,7 @@ impl CreateRequest {
         acl: Vec<ACL>,
         create_mode: CreateMode,
     ) -> Self {
-        let data = match data {
-            Some(d) => Some(Vec::from(d)),
-            _ => None,
-        };
+        let data = data.map(Vec::from);
         CreateRequest {
             path,
             data,

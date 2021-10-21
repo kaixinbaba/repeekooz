@@ -1,14 +1,16 @@
-use thiserror::Error;
 use std::fmt::{Display, Formatter};
+use std::io::Error;
+
+use cmd_lib::log::SetLoggerError;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ZKError {
-
     #[error("The argument `{0}` is not legitimate, error message is {1}")]
     ArgumentError(String, String),
 
-    #[error("There is something wrong with network")]
-    NetworkError,
+    #[error("NetworkError detail : {0}")]
+    NetworkError(String),
 
     #[error("Parse protocol occur error")]
     ProtocolParseError,
@@ -18,8 +20,26 @@ pub enum ZKError {
 
     #[error("Received error from ZooKeeper server message is {0}, error code is {1}")]
     ServerError(ServerErrorCode, i32),
-
 }
+
+impl<T> From<tokio::sync::mpsc::error::SendError<T>> for ZKError {
+    fn from(e: tokio::sync::mpsc::error::SendError<T>) -> Self {
+        ZKError::NetworkError(e.to_string())
+    }
+}
+
+impl From<log::SetLoggerError> for ZKError {
+    fn from(_: SetLoggerError) -> Self {
+        ZKError::UnknownError
+    }
+}
+
+impl From<std::io::Error> for ZKError {
+    fn from(_: Error) -> Self {
+        ZKError::UnknownError
+    }
+}
+
 
 /// buruma 常见错误
 #[derive(Error, Debug, Eq, PartialEq)]

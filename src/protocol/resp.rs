@@ -125,7 +125,7 @@ pub(crate) struct GetDataResponse {
 impl Deserializer for GetDataResponse {
     fn read(&mut self, b: &mut BytesMut) -> ZKResult<()> {
         self.data = self.read_slice_unchecked(b);
-        self.stat.read(b);
+        self.stat.read(b)?;
         Ok(())
     }
 }
@@ -163,7 +163,7 @@ impl Deserializer for GetChildren2Response {
                 self.path_list.push(path);
             }
         }
-        self.stat.read(b);
+        self.stat.read(b)?;
         Ok(())
     }
 }
@@ -180,11 +180,11 @@ impl Deserializer for GetACLResponse {
         if len != -1 {
             for _ in 0..len {
                 let mut acl = ACL::default();
-                acl.read(b);
+                acl.read(b)?;
                 self.acl_list.push(acl);
             }
         }
-        self.stat.read(b);
+        self.stat.read(b)?;
         Ok(())
     }
 }

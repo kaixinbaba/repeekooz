@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Mutex;
@@ -29,7 +30,7 @@ impl From<WatcherEvent> for WatchedEvent {
 
 /// 事件回调 trait，实现该 trait 即可自定义处理 ZooKeeper 回调通知
 pub trait Watcher: Debug + Send {
-    fn process(&self, event: &WatchedEvent) -> ZKResult<()>;
+    fn process(&self, event: &WatchedEvent);
 }
 
 #[derive(Debug)]
@@ -90,8 +91,7 @@ impl WatcherManager {
         match guard.get_mut(&path) {
             Some(v) => v.push(watcher),
             _ => {
-                let mut v = Vec::new();
-                v.push(watcher);
+                let v = vec![watcher];
                 guard.insert(path, v);
             }
         }
@@ -111,7 +111,7 @@ impl WatcherManager {
 
     fn add_watches(
         &self,
-        path: &String,
+        path: &str,
         watchers: &mut Vec<Box<dyn Watcher>>,
         result: &Mutex<HashMap<String, Vec<Box<dyn Watcher>>>>,
     ) {
@@ -120,8 +120,9 @@ impl WatcherManager {
         }
     }
 
-    fn path_iter(path: &String) {
-        let _split = path.split("/");
+    fn path_iter(path: &str) {
+        let _split = path.split('/');
+        todo!()
     }
 
     fn trigger_persistent_watches(&self, event: &WatchedEvent) {
@@ -181,17 +182,17 @@ impl WatcherManager {
             EventType::NodeCreated | EventType::NodeDataChanged => {
                 self.add_watches(&event.path, &mut watchers, &self.data_watches);
                 self.add_watches(&event.path, &mut watchers, &self.exists_watches);
-                self.trigger_persistent_watches(&event);
+                self.trigger_persistent_watches(event);
             }
             EventType::NodeChildrenChanged => {
                 self.add_watches(&event.path, &mut watchers, &self.child_watches);
-                self.trigger_persistent_watches(&event);
+                self.trigger_persistent_watches(event);
             }
             EventType::NodeDeleted => {
                 self.add_watches(&event.path, &mut watchers, &self.data_watches);
                 self.add_watches(&event.path, &mut watchers, &self.exists_watches);
                 self.add_watches(&event.path, &mut watchers, &self.child_watches);
-                self.trigger_persistent_watches(&event);
+                self.trigger_persistent_watches(event);
             }
             _ => panic!("Invalid EventType! {:?}", event.event_type),
         }
@@ -209,7 +210,7 @@ impl<'a> Iterator for PathIterable<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.path == "" || self.level >= self.max_level {
+        if self.path.is_empty() || self.level >= self.max_level {
             return None;
         }
         let local_path = self.path;
@@ -217,8 +218,8 @@ impl<'a> Iterator for PathIterable<'a> {
         if self.path == "/" {
             self.path = "";
         } else {
-            self.path = &self.path[0..self.path.rfind("/").unwrap()];
-            if self.path == "" {
+            self.path = &self.path[0..self.path.rfind('/').unwrap()];
+            if self.path.is_empty() {
                 self.path = "/";
             }
         }
