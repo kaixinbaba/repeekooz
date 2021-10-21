@@ -16,7 +16,7 @@ use tokio::time::Duration;
 
 use crate::{WatchedEvent, Watcher, ZKError, ZKResult};
 use crate::constants::{OpCode, States, XidType};
-use crate::error::ServerErrorCode;
+use crate::error::{ServerErrorCode, ServerInfo};
 use crate::metric::Metrics;
 use crate::protocol::{Deserializer, Serializer};
 use crate::protocol::req::{ConnectRequest, DEATH_PTYPE, ReqPacket, RequestHeader};
@@ -185,21 +185,21 @@ impl HostProvider {
     fn validate_host(host: &str) -> ZKResult<String> {
         let ip_port = host.split(':').collect::<Vec<&str>>();
         if ip_port.len() != 2 {
-            return Err(ZKError::ArgumentError("host".into(), "Host Address format must be 'ip:port'".into()));
+            return Err(ZKError::ServerInfoError(ServerInfo::Host, "Host Address format must be 'ip:port'".into()));
         }
         match ip_port.get(1).unwrap().parse::<usize>() {
             Ok(port) if port <= 65535 => port,
             _ => {
-                return Err(ZKError::ArgumentError("port".into(), "Port must be number and less than 65535".into()));
+                return Err(ZKError::ServerInfoError(ServerInfo::Port, "Port must be number and less than 65535".into()));
             }
         };
 
         for ip in ip_port.get(0).unwrap().split('.') {
             match ip.parse::<usize>() {
                 Ok(i) if i > 255 => {
-                    return Err(ZKError::ArgumentError("ip".into(), "ip address must between 0 and 255".into()));
+                    return Err(ZKError::ServerInfoError(ServerInfo::Ip, "ip address must between 0 and 255".into()));
                 }
-                Err(_) => return Err(ZKError::ArgumentError("ip".into(), "Invalid ip, must be number".into())),
+                Err(_) => return Err(ZKError::ServerInfoError(ServerInfo::Ip, "Invalid ip, must be number".into())),
                 _ => (),
             }
         }
@@ -209,7 +209,7 @@ impl HostProvider {
     pub(self) fn new(connect_string: &str) -> ZKResult<(HostProvider, String)> {
         let split_chroot = connect_string.split('/').collect::<Vec<&str>>();
         if split_chroot.len() > 2 {
-            return Err(ZKError::ArgumentError("host with chroot".into(), "chroot format must be like 'ip:port/chroot'".into()));
+            return Err(ZKError::ServerInfoError(ServerInfo::Chroot, "chroot format must be like 'ip:port/chroot'".into()));
         }
         let mut server_list = Vec::new();
         for add in split_chroot.get(0).unwrap().split(',') {

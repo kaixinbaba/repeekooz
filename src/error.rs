@@ -4,11 +4,34 @@ use std::io::Error;
 use cmd_lib::log::SetLoggerError;
 use thiserror::Error;
 
+#[derive(Debug)]
+pub enum ServerInfo {
+    Host,
+    Ip,
+    Port,
+    Chroot,
+}
+
+impl Display for ServerInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            ServerInfo::Host => "Host",
+            ServerInfo::Ip => "Ip address",
+            ServerInfo::Port => "Port",
+            ServerInfo::Chroot => "Chroot",
+        })
+    }
+}
+
+
+
 #[derive(Error, Debug)]
 pub enum ZKError {
-    #[error("The argument `{0}` is not legitimate, error message is {1}")]
-    ArgumentError(String, String),
-
+    /// ArgumentError
+    #[error("The `{0}` is not correct [{1}]")]
+    ServerInfoError(ServerInfo, String),
+    #[error("The path `{0}` that you provide is not legitimate [{1}]")]
+    PathError(String, String),
     #[error("NetworkError detail : {0}")]
     NetworkError(String),
 
@@ -152,5 +175,15 @@ impl From<isize> for ServerErrorCode {
             -124 => ServerErrorCode::SessionClosedRequireSASLAuth,
             _ => ServerErrorCode::SystemError,
         }
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use crate::ZKError;
+
+    #[test]
+    fn test_error() {
     }
 }
