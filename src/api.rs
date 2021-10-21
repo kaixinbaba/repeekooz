@@ -7,7 +7,7 @@ use bytes::BytesMut;
 
 use crate::{paths, WatchedEvent, WatcherType, ZKError, ZKResult};
 use crate::client::Client;
-use crate::constants::{AddWatchMode, CreateMode, IGNORE_VERSION, OpCode, States};
+use crate::constants::{AddWatchMode, CreateMode, OpCode, States, VersionType};
 use crate::error::ServerErrorCode;
 use crate::protocol::req::{
     ACL, AddWatchRequest, CreateRequest, DeleteRequest,
@@ -106,7 +106,7 @@ impl ZooKeeper {
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     pub async fn delete(&mut self, path: &str) -> ZKResult<()> {
-        self.deletev(path, IGNORE_VERSION).await?;
+        self.deletev(path, VersionType::NoVersion).await?;
         Ok(())
     }
 
@@ -118,8 +118,8 @@ impl ZooKeeper {
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
-    /// - `version`： 节点指定的版本号，-1 为忽略版本
-    pub async fn deletev(&mut self, path: &str, version: i32) -> ZKResult<()> {
+    /// - `version`： 节点指定的版本号，参考 [`VersionType`]
+    pub async fn deletev(&mut self, path: &str, version: VersionType) -> ZKResult<()> {
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::Delete));
         let mut req = BytesMut::new();
@@ -142,7 +142,7 @@ impl ZooKeeper {
     /// # Returns
     /// - `Stat`： 统计对象，请查看 [`Stat`]
     pub async fn set(&mut self, path: &str, data: &[u8]) -> ZKResult<Stat> {
-        self.setv(path, data, IGNORE_VERSION).await
+        self.setv(path, data, VersionType::NoVersion).await
     }
 
     /// 为目标路径设置数据，携带版本条件，满足版本号才能设置成功
@@ -154,10 +154,10 @@ impl ZooKeeper {
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     /// - `data`： 节点数据
-    /// - `version`： 节点指定的版本号，-1 为忽略版本
+    /// - `version`： 节点指定的版本号，，参考 [`VersionType`]
     /// # Returns
     /// - `Stat`： 统计对象，请查看 [`Stat`]
-    pub async fn setv(&mut self, path: &str, data: &[u8], version: i32) -> ZKResult<Stat> {
+    pub async fn setv(&mut self, path: &str, data: &[u8], version: VersionType) -> ZKResult<Stat> {
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::SetData));
         let mut req = BytesMut::new();

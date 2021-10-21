@@ -1,11 +1,15 @@
 #![allow(unused)]
+
+use std::fmt::{Display, Formatter};
+
 /// ZooKeeper 定义的 5 种权限
-/// `Read`： 节点可读
-/// `Write`： 节点可写
-/// `Create`： 可创建子节点
-/// `Delete`： 可删除子节点
-/// `ACL`： 可读写 ACL 数据
-/// `All`： 所有以上权限
+/// `Read`： 节点可读        0 0 0 0 1
+/// `Write`： 节点可写       0 0 0 1 0
+/// `Create`： 可创建子节点   0 0 1 0 0
+/// `Delete`： 可删除子节点   0 1 0 0 0
+/// `ACL`： 可读写 ACL 数据  1 0 0 0 0
+/// `All`： 所有以上权限     1 1 1 1 1
+#[derive(Debug)]
 pub enum Perms {
     Read,
     Write,
@@ -18,13 +22,28 @@ pub enum Perms {
 impl From<Perms> for i32 {
     fn from(perms: Perms) -> Self {
         match perms {
-            Perms::Read => 1 << 0,
-            Perms::Write => 1 << 1,
-            Perms::Create => 1 << 2,
-            Perms::Delete => 1 << 3,
-            Perms::ACL => 1 << 4,
-            Perms::All => 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3 | 1 << 4 | 1 << 5,
+            Perms::Read => 1,
+            Perms::Write => 2,
+            Perms::Create => 4,
+            Perms::Delete => 8,
+            Perms::ACL => 16,
+            Perms::All => 31,
         }
+    }
+}
+
+impl Display for Perms {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Perms::Read => "R",
+            Perms::Write => "W",
+            Perms::Create => "C",
+            Perms::Delete => "D",
+            Perms::ACL => "A",
+            Perms::All => "RWCDA",
+        };
+        f.write_str(s);
+        Ok(())
     }
 }
 
@@ -40,6 +59,20 @@ pub const SUPER: &str = "super";
 pub const ANYONE: &str = "anyone";
 /// 忽略版本号，一般用于 set_data 或 delete
 pub const IGNORE_VERSION: i32 = -1;
+
+pub enum VersionType {
+    Version(i32),
+    NoVersion,
+}
+
+impl From<VersionType> for i32 {
+    fn from(version_type: VersionType) -> Self {
+        match version_type {
+            VersionType::Version(v) => v,
+            VersionType::NoVersion => IGNORE_VERSION,
+        }
+    }
+}
 
 pub enum WatcherType {
     Children,

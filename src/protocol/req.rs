@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use bytes::BytesMut;
 
-use crate::constants::{AddWatchMode, CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, WORLD};
+use crate::constants::{AddWatchMode, CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, WORLD, VersionType};
 use crate::protocol::{Deserializer, Serializer};
 use crate::{WatcherType, ZKResult};
 
@@ -97,7 +97,7 @@ impl From<(String, String)> for Scheme {
 /// - `scheme`：鉴权模式，详情可见 [`Scheme`]
 #[derive(Debug, Eq, PartialEq)]
 pub struct ACL {
-    // TODO 该字段应该也是枚举对象或者其他有意义的类型，而不是 u32
+    // TODO 该字段应该也是枚举对象或者其他有意义的类型，而不是 i32
     pub perms: i32,
     pub scheme: Scheme,
 }
@@ -231,8 +231,8 @@ impl Serializer for DeleteRequest {
     }
 }
 impl DeleteRequest {
-    pub(crate) fn new(path: String, version: i32) -> Self {
-        DeleteRequest { path, version }
+    pub(crate) fn new(path: String, version: VersionType) -> Self {
+        DeleteRequest { path, version: version.into() }
     }
 }
 
@@ -253,11 +253,11 @@ impl Serializer for SetDataRequest {
 }
 
 impl SetDataRequest {
-    pub(crate) fn new(path: String, data: &[u8], version: i32) -> Self {
+    pub(crate) fn new(path: String, data: &[u8], version: VersionType) -> Self {
         SetDataRequest {
             path,
             data: Vec::from(data),
-            version,
+            version: version.into(),
         }
     }
 }
