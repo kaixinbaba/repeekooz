@@ -1,3 +1,4 @@
+#![allow(unused)]
 #[macro_use]
 extern crate log;
 
@@ -16,9 +17,8 @@ const DEFAULT_ZK_SERVER: &str = "127.0.0.1:2181";
 struct WatcherDemo;
 
 impl Watcher for WatcherDemo {
-    fn process(&self, event: &WatchedEvent) -> ZKResult<()> {
+    fn process(&self, event: &WatchedEvent) {
         info!("{:?}", event);
-        Ok(())
     }
 }
 

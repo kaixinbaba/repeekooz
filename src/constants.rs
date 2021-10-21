@@ -406,7 +406,7 @@ mod test {
 
     #[test]
     fn test_as() {
-        let code: u32 = WatcherType::Any.into();
+        let code: i32 = WatcherType::Any.into();
         println!("{}", code);
     }
 }
