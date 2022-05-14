@@ -6,9 +6,9 @@ extern crate log;
 use futures_timer::Delay;
 use tokio::time::Duration;
 
-use buruma::{AddWatchMode, ACL};
-use buruma::{CreateMode, Scheme};
-use buruma::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
+use repeekooz::{AddWatchMode, ACL};
+use repeekooz::{CreateMode, Scheme};
+use repeekooz::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
 
 
 const DEFAULT_ZK_SERVER: &str = "127.0.0.1:2181";
@@ -82,7 +82,7 @@ async fn children_count() {
         .await
         .unwrap();
 
-    let x = zk.children_count("/buruma").await;
+    let x = zk.children_count("/repeekooz").await;
     info!("{:?}", x);
 }
 

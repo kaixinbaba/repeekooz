@@ -1,21 +1,25 @@
 [package]
-name = "buruma"
+name = "repeekooz"
 version = "0.1.0"
 authors = ["kaixinbaba <452914639@qq.com>"]
-edition = "2018"
+edition = "2021"
 description = "A Powerful async ZooKeeper Client with tokio."
-license = "MIT"
+license = "GPL-3.0-or-later"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = [
+    "repeekooz-tui",
+]
 
 [dependencies]
-log = "0.4.11"
-pretty_env_logger = "0.4.0"
-tokio = { version = "0.3.6", features = ["full"] }
-bytes = "0.6.0"
+log = "0.4"
+pretty_env_logger = "0.4"
+tokio = { version = "1.18", features = ["full"] }
+bytes = "1"
 lazy_static = "1.4.0"
-chrono = "0.4.19"
-futures-timer = "3.0.2"
+chrono = "0.4"
+futures-timer = "3"
 cmd_lib = "1.2.4"
-thiserror = "1.0.30"
-anyhow = "1.0.44"
+anyhow = "1"
+thiserror = "1"

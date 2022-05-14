@@ -23,8 +23,6 @@ impl Display for ServerInfo {
     }
 }
 
-
-
 #[derive(Error, Debug)]
 pub enum ZKError {
     /// ArgumentError
@@ -63,8 +61,7 @@ impl From<std::io::Error> for ZKError {
     }
 }
 
-
-/// buruma 常见错误
+/// repeekooz 常见错误
 #[derive(Error, Debug, Eq, PartialEq)]
 pub enum ServerErrorCode {
     SystemError,
@@ -97,7 +94,6 @@ pub enum ServerErrorCode {
     ReConfigDisabled,
     SessionClosedRequireSASLAuth,
 }
-
 
 impl Display for ServerErrorCode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -178,12 +174,10 @@ impl From<isize> for ServerErrorCode {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use crate::ZKError;
 
     #[test]
-    fn test_error() {
-    }
+    fn test_error() {}
 }

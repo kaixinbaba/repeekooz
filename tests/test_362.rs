@@ -7,16 +7,16 @@ extern crate log;
 use futures_timer::Delay;
 use tokio::time::Duration;
 
-use buruma::{AddWatchMode, ACL};
-use buruma::{CreateMode, Scheme};
-use buruma::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
+use repeekooz::{AddWatchMode, ACL};
+use repeekooz::{CreateMode, Scheme};
+use repeekooz::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
 
 const DEFAULT_ZK_SERVER: &str = "127.0.0.1:2181";
 
 
 #[tokio::test]
 async fn full_test() {
-    let basic_path = "/buruma";
+    let basic_path = "/repeekooz";
     let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(6))
         .await
         .unwrap();
@@ -36,20 +36,20 @@ async fn full_test() {
     assert!(not_exists_result.is_none());
 
     // set
-    let stat = zk.set(basic_path, "buruma".as_bytes()).await.unwrap();
+    let stat = zk.set(basic_path, "repeekooz".as_bytes()).await.unwrap();
     info!("{:?}", stat);
 
     // get
     let get_data_result = zk.get(basic_path, None).await.unwrap();
     assert_eq!(
-        "buruma".to_string(),
+        "repeekooz".to_string(),
         String::from_utf8(get_data_result).unwrap()
     );
 
     // get_ephemerals
     for i in 0..3 {
         zk.create(
-            format!("/buruma{}", i).as_str(),
+            format!("/repeekooz{}", i).as_str(),
             None,
             ACL::world_acl(),
             CreateMode::Ephemeral,
@@ -67,7 +67,7 @@ async fn full_test() {
     let mut stat = Stat::default();
     let children_list = zk.childrens(basic_path, &mut stat).await.unwrap();
     assert_eq!(children_list.len(), 0);
-    assert_eq!(stat.data_length, "buruma".as_bytes().len() as i32);
+    assert_eq!(stat.data_length, "repeekooz".as_bytes().len() as i32);
 
     // children_count
     let total_count = zk.children_count(basic_path).await.unwrap();

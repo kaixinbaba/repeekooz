@@ -63,7 +63,7 @@ impl ZooKeeper {
     ///        .await
     ///        .unwrap();
     /// // 创建一个带数据的节点
-    /// let path = zk.create("/your/path", Some("buruma".as_bytes()), ACL::world_acl(), CreateMode::Persistent)
+    /// let path = zk.create("/your/path", Some("repeekooz".as_bytes()), ACL::world_acl(), CreateMode::Persistent)
     ///        .await
     ///        .unwrap();
     /// ```
