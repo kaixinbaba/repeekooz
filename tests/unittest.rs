@@ -2,14 +2,12 @@
 #[macro_use]
 extern crate log;
 
-
 use futures_timer::Delay;
 use tokio::time::Duration;
 
 use repeekooz::{AddWatchMode, ACL};
 use repeekooz::{CreateMode, Scheme};
 use repeekooz::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
-
 
 const DEFAULT_ZK_SERVER: &str = "127.0.0.1:2181";
 
@@ -107,7 +105,7 @@ async fn get_ephemerals() {
             ACL::world_acl(),
             CreateMode::Ephemeral,
         )
-            .await;
+        .await;
     }
     zk.create("/testppp", data, ACL::world_acl(), CreateMode::Persistent)
         .await;
@@ -117,7 +115,7 @@ async fn get_ephemerals() {
         ACL::world_acl(),
         CreateMode::Ephemeral,
     )
-        .await;
+    .await;
 
     let x = zk.get_ephemerals("/test").await.unwrap();
     assert_eq!(x.len(), 4);
@@ -162,7 +160,6 @@ async fn add_watch() {
     info!("{:?}", x);
     Delay::new(Duration::from_secs(120)).await;
 }
-
 
 #[test]
 fn test_from_string() {

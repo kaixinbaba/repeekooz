@@ -1,26 +1,26 @@
 extern crate chrono;
 
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering::Release;
+use std::sync::{Arc, Mutex};
 
 use bytes::{Buf, BufMut, BytesMut};
 use chrono::prelude::*;
 use futures_timer::Delay;
-use tokio::io::{self, ReadHalf, WriteHalf, AsyncWriteExt, AsyncReadExt};
+use tokio::io::{self, AsyncReadExt, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::Duration;
 
-use crate::{WatchedEvent, Watcher, ZKError, ZKResult};
 use crate::constants::{OpCode, States, XidType};
 use crate::error::{ServerErrorCode, ServerInfo};
 use crate::metric::Metrics;
-use crate::protocol::{Deserializer, Serializer};
-use crate::protocol::req::{ConnectRequest, DEATH_PTYPE, ReqPacket, RequestHeader};
+use crate::protocol::req::{ConnectRequest, ReqPacket, RequestHeader, DEATH_PTYPE};
 use crate::protocol::resp::{ConnectResponse, ReplyHeader, WatcherEvent};
+use crate::protocol::{Deserializer, Serializer};
 use crate::watcher::WatcherManager;
+use crate::{WatchedEvent, Watcher, ZKError, ZKResult};
 
 struct SenderTask {
     packet_rx: Receiver<ReqPacket>,
@@ -47,7 +47,9 @@ impl SenderTask {
             if let Some(req) = packet.req {
                 buf.extend(req);
             }
-            self.writer.write_buf(&mut Client::wrap_len_buf(buf)).await?;
+            self.writer
+                .write_buf(&mut Client::wrap_len_buf(buf))
+                .await?;
             self.writer.flush().await?;
         }
     }
@@ -184,21 +186,35 @@ impl HostProvider {
     fn validate_host(host: &str) -> ZKResult<String> {
         let ip_port = host.split(':').collect::<Vec<&str>>();
         if ip_port.len() != 2 {
-            return Err(ZKError::ServerInfoError(ServerInfo::Host, "Host Address format must be 'ip:port'".into()));
+            return Err(ZKError::ServerInfoError(
+                ServerInfo::Host,
+                "Host Address format must be 'ip:port'".into(),
+            ));
         }
         match ip_port.get(1).unwrap().parse::<usize>() {
             Ok(port) if port <= 65535 => port,
             _ => {
-                return Err(ZKError::ServerInfoError(ServerInfo::Port, "Port must be number and less than 65535".into()));
+                return Err(ZKError::ServerInfoError(
+                    ServerInfo::Port,
+                    "Port must be number and less than 65535".into(),
+                ));
             }
         };
 
         for ip in ip_port.get(0).unwrap().split('.') {
             match ip.parse::<usize>() {
                 Ok(i) if i > 255 => {
-                    return Err(ZKError::ServerInfoError(ServerInfo::Ip, "ip address must between 0 and 255".into()));
+                    return Err(ZKError::ServerInfoError(
+                        ServerInfo::Ip,
+                        "ip address must between 0 and 255".into(),
+                    ));
                 }
-                Err(_) => return Err(ZKError::ServerInfoError(ServerInfo::Ip, "Invalid ip, must be number".into())),
+                Err(_) => {
+                    return Err(ZKError::ServerInfoError(
+                        ServerInfo::Ip,
+                        "Invalid ip, must be number".into(),
+                    ))
+                }
                 _ => (),
             }
         }
@@ -208,7 +224,10 @@ impl HostProvider {
     pub(self) fn new(connect_string: &str) -> ZKResult<(HostProvider, String)> {
         let split_chroot = connect_string.split('/').collect::<Vec<&str>>();
         if split_chroot.len() > 2 {
-            return Err(ZKError::ServerInfoError(ServerInfo::Chroot, "chroot format must be like 'ip:port/chroot'".into()));
+            return Err(ZKError::ServerInfoError(
+                ServerInfo::Chroot,
+                "chroot format must be like 'ip:port/chroot'".into(),
+            ));
         }
         let mut server_list = Vec::new();
         for add in split_chroot.get(0).unwrap().split(',') {
@@ -247,6 +266,7 @@ impl HostProvider {
 
 #[derive(Debug)]
 pub(crate) struct Client {
+    #[allow(dead_code)]
     host_provider: HostProvider,
     pub session_timeout: u32,
     packet_tx: Sender<ReqPacket>,
@@ -315,7 +335,11 @@ impl Client {
         let (mut host_provider, chroot) = HostProvider::new(connect_string)?;
         let socket = match TcpStream::connect(host_provider.pick_host()).await {
             Ok(socket) => socket,
-            Err(_e) => return Err(ZKError::NetworkError("Connect to ZooKeeper server error!".into())),
+            Err(_e) => {
+                return Err(ZKError::NetworkError(
+                    "Connect to ZooKeeper server error!".into(),
+                ))
+            }
         };
 
         let (reader, writer) = io::split(socket);
@@ -402,17 +426,22 @@ impl Client {
         let buf = match self.buf_rx.recv().await {
             Some((reply_header, buf)) => {
                 if reply_header.err != 0 {
-                    return Err(ZKError::ServerError(ServerErrorCode::from(reply_header.err), reply_header.err));
+                    return Err(ZKError::ServerError(
+                        ServerErrorCode::from(reply_header.err),
+                        reply_header.err,
+                    ));
                 }
                 if let Some(xid) = xid {
                     if reply_header.xid != xid {
-                        return Err(ZKError::ServerError(ServerErrorCode::ConnectionLoss, reply_header.err));
+                        return Err(ZKError::ServerError(
+                            ServerErrorCode::ConnectionLoss,
+                            reply_header.err,
+                        ));
                     }
                 }
                 buf
             }
             _ => return Err(ZKError::UnknownError),
-
         };
         Ok(buf)
     }
@@ -464,7 +493,9 @@ impl Client {
         D: Deserializer,
     {
         if !self.state.is_connected() {
-            return Err(ZKError::NetworkError("Client connection is not ready!".into()));
+            return Err(ZKError::NetworkError(
+                "Client connection is not ready!".into(),
+            ));
         }
         let xid = self.write_buf(rh, req).await?;
         let mut buf = self.read_buf(xid).await?;

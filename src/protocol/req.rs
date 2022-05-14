@@ -3,7 +3,9 @@ use std::str::FromStr;
 
 use bytes::BytesMut;
 
-use crate::constants::{AddWatchMode, CreateMode, OpCode, Perms, ANYONE, DIGEST, IP, WORLD, VersionType};
+use crate::constants::{
+    AddWatchMode, CreateMode, OpCode, Perms, VersionType, ANYONE, DIGEST, IP, WORLD,
+};
 use crate::protocol::{Deserializer, Serializer};
 use crate::{WatcherType, ZKResult};
 
@@ -232,7 +234,10 @@ impl Serializer for DeleteRequest {
 }
 impl DeleteRequest {
     pub(crate) fn new(path: String, version: VersionType) -> Self {
-        DeleteRequest { path, version: version.into() }
+        DeleteRequest {
+            path,
+            version: version.into(),
+        }
     }
 }
 

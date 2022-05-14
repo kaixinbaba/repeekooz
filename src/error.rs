@@ -176,8 +176,6 @@ impl From<isize> for ServerErrorCode {
 
 #[cfg(test)]
 mod test {
-    use crate::ZKError;
-
     #[test]
     fn test_error() {}
 }

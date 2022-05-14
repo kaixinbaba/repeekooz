@@ -5,13 +5,12 @@ use std::time::Duration;
 
 use bytes::BytesMut;
 
-use crate::{paths, WatchedEvent, WatcherType, ZKError, ZKResult};
 use crate::client::Client;
 use crate::constants::{AddWatchMode, CreateMode, OpCode, States, VersionType};
 use crate::error::ServerErrorCode;
 use crate::protocol::req::{
-    ACL, AddWatchRequest, CreateRequest, DeleteRequest,
-    PathAndWatchRequest, PathRequest, RequestHeader, SetACLRequest, SetDataRequest,
+    AddWatchRequest, CreateRequest, DeleteRequest, PathAndWatchRequest, PathRequest, RequestHeader,
+    SetACLRequest, SetDataRequest, ACL,
 };
 use crate::protocol::resp::{
     CreateResponse, DummyResponse, GetACLResponse, GetAllChildrenNumberResponse,
@@ -19,6 +18,7 @@ use crate::protocol::resp::{
 };
 use crate::protocol::Serializer;
 use crate::watcher::Watcher;
+use crate::{paths, WatchedEvent, WatcherType, ZKError, ZKResult};
 
 /// 整个模块的 API 入口对象
 #[derive(Debug)]
@@ -43,7 +43,7 @@ impl ZooKeeper {
     ///
     /// # Args
     /// - `connect_string`: 连接字符串格式为 "ip1:port1,ip2:port2,ip3:port3.../chroot"，其中 chroot 为可选
-    /// - `session_timeout`: 会话超时时间, 参考 [`Duration`]     
+    /// - `session_timeout`: 会话超时时间, 参考 [`Duration`]
     /// # Returns
     /// - `ZooKeeper`：ZooKeeper 客户端对象
     /// # Errors
@@ -274,9 +274,7 @@ impl ZooKeeper {
             Ok(resp) => Ok(Some(resp.stat)),
             Err(e) => match e {
                 ZKError::ServerError(ServerErrorCode::NoNode, _) => Ok(None),
-                _ => {
-                    Err(e)
-                }
+                _ => Err(e),
             },
         }
     }

@@ -131,7 +131,7 @@ impl WatcherManager {
                 ww.process(event);
             }
         }
-        for p in PathIterable::new(&event.path, i32::max_value()).into_iter() {
+        for p in PathIterable::new(&event.path, i32::max_value()) {
             if let Some(v) = self.persistent_recursive_watches.lock().unwrap().get(p) {
                 for ww in v.iter() {
                     ww.process(event);
@@ -147,8 +147,8 @@ impl WatcherManager {
         let mut watchers: Vec<Box<dyn Watcher>> = Vec::new();
         match event.event_type {
             EventType::None => {
-                let clear =
-                    self.disable_auto_watch_reset && event.keep_state.ne(&KeeperState::SyncConnected);
+                let clear = self.disable_auto_watch_reset
+                    && event.keep_state.ne(&KeeperState::SyncConnected);
                 // data_watches
                 for (_, v) in self.data_watches.lock().unwrap().iter_mut() {
                     watchers.append(v);

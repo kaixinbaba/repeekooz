@@ -1,6 +1,9 @@
+use std::time::Duration;
+
 use repeekooz::ZooKeeper;
 
 #[tokio::main]
 async fn main() {
-    println!("Hello, world!");
+    let client = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(5)).await;
+    println!("{:?}", client);
 }

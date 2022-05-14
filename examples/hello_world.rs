@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate log;
 
-
 use std::time::Duration;
 
 use repeekooz::ZKResult;

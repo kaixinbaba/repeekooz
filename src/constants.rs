@@ -341,7 +341,6 @@ impl CreateMode {
     }
 }
 
-
 impl From<CreateMode> for i32 {
     fn from(create_mode: CreateMode) -> Self {
         isize::from(create_mode) as i32

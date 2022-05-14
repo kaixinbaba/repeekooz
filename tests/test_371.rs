@@ -2,8 +2,6 @@
 #[macro_use]
 extern crate log;
 
-
-
 use futures_timer::Delay;
 use tokio::time::Duration;
 
@@ -13,7 +11,7 @@ use repeekooz::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
 
 const DEFAULT_ZK_SERVER: &str = "127.0.0.1:2181";
 
-
+#[ignore]
 #[tokio::test]
 async fn full_test() {
     let basic_path = "/repeekooz";

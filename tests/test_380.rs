@@ -87,5 +87,6 @@ async fn full_test() {
         scheme: Scheme::World,
     }];
     assert_eq!(vec, acl_list);
+
     zk.delete(basic_path).await.unwrap();
 }
