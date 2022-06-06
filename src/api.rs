@@ -49,9 +49,12 @@ impl ZooKeeper {
     /// # Errors
     ///
     /// 无法连接服务端或者连接字符串格式有问题将会返回异常
-    pub async fn new(connect_string: &str, session_timeout: Duration) -> ZKResult<ZooKeeper> {
+    pub async fn new(
+        connect_string: impl Into<&str>,
+        session_timeout: Duration,
+    ) -> ZKResult<ZooKeeper> {
         pretty_env_logger::try_init()?;
-        let client = Client::new(connect_string, session_timeout.as_millis() as u32).await?;
+        let client = Client::new(connect_string.into(), session_timeout.as_millis() as u32).await?;
         Ok(ZooKeeper { client })
     }
 
@@ -77,11 +80,12 @@ impl ZooKeeper {
     /// - `String`：目标路径，同参数 `path`
     pub async fn create(
         &mut self,
-        path: &str,
+        path: impl Into<&str>,
         data: Option<&[u8]>,
         acl_list: Vec<ACL>,
         create_model: CreateMode,
     ) -> ZKResult<String> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rtype = match create_model {
             CreateMode::Container => OpCode::CreateContainer,
@@ -105,7 +109,7 @@ impl ZooKeeper {
     ///
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
-    pub async fn delete(&mut self, path: &str) -> ZKResult<()> {
+    pub async fn delete(&mut self, path: impl Into<&str>) -> ZKResult<()> {
         self.deletev(path, VersionType::NoVersion).await?;
         Ok(())
     }
@@ -119,7 +123,8 @@ impl ZooKeeper {
     /// # Args
     /// - `path`： 目标路径，必须以 "/" 开头
     /// - `version`： 节点指定的版本号，参考 [`VersionType`]
-    pub async fn deletev(&mut self, path: &str, version: VersionType) -> ZKResult<()> {
+    pub async fn deletev(&mut self, path: impl Into<&str>, version: VersionType) -> ZKResult<()> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::Delete));
         let mut req = BytesMut::new();
@@ -141,7 +146,7 @@ impl ZooKeeper {
     /// - `data`： 节点数据
     /// # Returns
     /// - `Stat`： 统计对象，请查看 [`Stat`]
-    pub async fn set(&mut self, path: &str, data: &[u8]) -> ZKResult<Stat> {
+    pub async fn set(&mut self, path: impl Into<&str>, data: &[u8]) -> ZKResult<Stat> {
         self.setv(path, data, VersionType::NoVersion).await
     }
 
@@ -157,7 +162,13 @@ impl ZooKeeper {
     /// - `version`： 节点指定的版本号，，参考 [`VersionType`]
     /// # Returns
     /// - `Stat`： 统计对象，请查看 [`Stat`]
-    pub async fn setv(&mut self, path: &str, data: &[u8], version: VersionType) -> ZKResult<Stat> {
+    pub async fn setv(
+        &mut self,
+        path: impl Into<&str>,
+        data: &[u8],
+        version: VersionType,
+    ) -> ZKResult<Stat> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::SetData));
         let mut req = BytesMut::new();
@@ -179,7 +190,11 @@ impl ZooKeeper {
     /// - `stat`： 统计数据，可选，如果不为 None 则会将节点统计结果写入该对象, 关于更多统计对象，请查看 [`Stat`]
     /// # Returns
     /// - `Vec<u8>`： 目标节点的数据以字节数组的形式
-    pub async fn get(&mut self, path: &str, stat: Option<&mut Stat>) -> ZKResult<Vec<u8>> {
+    pub async fn get(
+        &mut self,
+        path: impl Into<&str>,
+        stat: Option<&mut Stat>,
+    ) -> ZKResult<Vec<u8>> {
         self.getw(path, None::<DummyWatcher>, stat).await
     }
 
@@ -197,10 +212,11 @@ impl ZooKeeper {
     /// - `Vec<u8>`： 目标节点的数据以字节数组的形式
     pub async fn getw(
         &mut self,
-        path: &str,
+        path: impl Into<&str>,
         watcher: Option<impl Watcher + 'static>,
         stat: Option<&mut Stat>,
     ) -> ZKResult<Vec<u8>> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::GetData));
         let mut req = BytesMut::new();
@@ -234,7 +250,7 @@ impl ZooKeeper {
     /// - `path`： 目标路径，必须以 "/" 开头
     /// # Returns
     /// - `Stat`： 统计对象，请查看 [`Stat`]
-    pub async fn exists(&mut self, path: &str) -> ZKResult<Option<Stat>> {
+    pub async fn exists(&mut self, path: impl Into<&str>) -> ZKResult<Option<Stat>> {
         self.existsw(path, None::<DummyWatcher>).await
     }
 
@@ -251,9 +267,10 @@ impl ZooKeeper {
     /// - `Stat`： 统计对象，请查看 [`Stat`]
     pub async fn existsw(
         &mut self,
-        path: &str,
+        path: impl Into<&str>,
         watcher: Option<impl Watcher + 'static>,
     ) -> ZKResult<Option<Stat>> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::Exists));
         let mut req = BytesMut::new();
@@ -289,7 +306,7 @@ impl ZooKeeper {
     /// - `path`： 目标路径，必须以 "/" 开头
     /// # Returns
     /// - `Vec<String>`： 子节点列表
-    pub async fn children(&mut self, path: &str) -> ZKResult<Vec<String>> {
+    pub async fn children(&mut self, path: impl Into<&str>) -> ZKResult<Vec<String>> {
         self.childrenw(path, None::<DummyWatcher>).await
     }
 
@@ -306,9 +323,10 @@ impl ZooKeeper {
     /// - `Vec<String>`： 子节点列表
     pub async fn childrenw(
         &mut self,
-        path: &str,
+        path: impl Into<&str>,
         watcher: Option<impl Watcher + 'static>,
     ) -> ZKResult<Vec<String>> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::GetChildren));
         let mut req = BytesMut::new();
@@ -341,7 +359,11 @@ impl ZooKeeper {
     /// - `stat`： 统计数据，统计结果会写入该对象, 关于更多统计对象，请查看 [`Stat`]
     /// # Returns
     /// - `Vec<String>`： 子节点列表
-    pub async fn childrens(&mut self, path: &str, stat: &mut Stat) -> ZKResult<Vec<String>> {
+    pub async fn childrens(
+        &mut self,
+        path: impl Into<&str>,
+        stat: &mut Stat,
+    ) -> ZKResult<Vec<String>> {
         self.childrensw(path, None::<DummyWatcher>, stat).await
     }
 
@@ -360,10 +382,11 @@ impl ZooKeeper {
     /// - `Vec<String>`： 子节点列表
     pub async fn childrensw(
         &mut self,
-        path: &str,
+        path: impl Into<&str>,
         watcher: Option<impl Watcher + 'static>,
         stat: &mut Stat,
     ) -> ZKResult<Vec<String>> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::GetChildren2));
         let mut req = BytesMut::new();
@@ -395,7 +418,8 @@ impl ZooKeeper {
     /// - `path`： 目标路径，必须以 "/" 开头
     /// # Returns
     /// - `u32`： 目标路径下的所有子节点数量
-    pub async fn children_count(&mut self, path: &str) -> ZKResult<u32> {
+    pub async fn children_count(&mut self, path: impl Into<&str>) -> ZKResult<u32> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::GetAllChildrenNumber));
         let mut req = BytesMut::new();
@@ -417,7 +441,8 @@ impl ZooKeeper {
     /// - `path`： 目标路径，必须以 "/" 开头，不会拼接 chroot
     /// # Returns
     /// - `Vec<String>`： 所有符合条件临时节点的列表
-    pub async fn get_ephemerals(&mut self, path: &str) -> ZKResult<Vec<String>> {
+    pub async fn get_ephemerals(&mut self, path: impl Into<&str>) -> ZKResult<Vec<String>> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::GetEphemerals));
         let mut req = BytesMut::new();
@@ -440,7 +465,12 @@ impl ZooKeeper {
     /// - `stat`： 统计数据，可选，如果不为 None 则会将结果写入该对象, 关于更多统计对象，请查看 [`Stat`]
     /// # Returns
     /// - `Vec<ACL>`： 节点的 ACL 列表
-    pub async fn get_acl(&mut self, path: &str, stat: Option<&mut Stat>) -> ZKResult<Vec<ACL>> {
+    pub async fn get_acl(
+        &mut self,
+        path: impl Into<&str>,
+        stat: Option<&mut Stat>,
+    ) -> ZKResult<Vec<ACL>> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::GetACL));
         let mut req = BytesMut::new();
@@ -468,10 +498,11 @@ impl ZooKeeper {
     /// - `Stat`： 统计对象，请查看 [`Stat`]
     pub async fn set_acl(
         &mut self,
-        path: &str,
+        path: impl Into<&str>,
         acl_list: Vec<ACL>,
         version: i32,
     ) -> ZKResult<Stat> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::SetACL));
         let mut req = BytesMut::new();
@@ -495,10 +526,11 @@ impl ZooKeeper {
     /// - `mode`： 添加回调的种类，请查看 [`AddWatchMode`]
     pub async fn add_watch<W: Watcher + 'static>(
         &mut self,
-        path: &str,
+        path: impl Into<&str>,
         watcher: W,
         mode: AddWatchMode,
     ) -> ZKResult<()> {
+        let path = path.into();
         paths::validate_path(path)?;
         let rh = Some(RequestHeader::new(OpCode::AddWatch));
         let mut req = BytesMut::new();
@@ -530,7 +562,7 @@ impl ZooKeeper {
     #[allow(unused)]
     pub async fn remove_watches<W: Watcher + 'static>(
         &mut self,
-        path: &str,
+        path: impl Into<&str>,
         watcher: W,
         watcher_type: WatcherType,
         local: bool,
