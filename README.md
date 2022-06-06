@@ -6,10 +6,10 @@
 ## Basic Usage
 引入依赖，在 `Cargo.toml`
 ```
-buruma = "0.1.0"
+repeekooz = "0.1.0"
 ```
 ```rust
-use buruma::{ACL, CreateMode, ZooKeeper};
+use repeekooz::{ACL, CreateMode, ZooKeeper};
 // create client
 let mut zk = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(5)).await?;
 // create node

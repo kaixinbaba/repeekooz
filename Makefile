@@ -1,4 +1,4 @@
-ZK_VERSION ?= 3.7.0
+ZK_VERSION ?= 3.7.1
 
 # Apache changed the name of the archive in version 3.5.x and seperated out
 # src and binary packages
