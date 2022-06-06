@@ -57,8 +57,6 @@ async fn full_test() {
         .await
         .unwrap();
     }
-    let ephe_vec = zk.get_ephemerals(basic_path).await.unwrap();
-    assert_eq!(ephe_vec.len(), 3);
 
     // children
     let children_list = zk.children(basic_path).await.unwrap();
@@ -69,10 +67,6 @@ async fn full_test() {
     let children_list = zk.childrens(basic_path, &mut stat).await.unwrap();
     assert_eq!(children_list.len(), 3);
     assert_eq!(stat.data_length, "repeekooz".as_bytes().len() as i32);
-
-    // children_count
-    let total_count = zk.children_count(basic_path).await.unwrap();
-    assert_eq!(total_count, 3);
 
     // get_acl
     let vec = zk.get_acl(basic_path, None).await.unwrap();
