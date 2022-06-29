@@ -12,6 +12,7 @@ use repeekooz::{Stat, WatchedEvent, Watcher, ZKResult, ZooKeeper};
 const DEFAULT_ZK_SERVER: &str = "127.0.0.1:2181";
 
 #[tokio::test]
+#[ignore]
 async fn full_test() {
     let basic_path = "/repeekooz359";
     let mut zk = ZooKeeper::new(DEFAULT_ZK_SERVER, Duration::from_secs(6))

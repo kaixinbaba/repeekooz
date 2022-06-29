@@ -1,9 +1,36 @@
-use std::time::Duration;
+#![warn(missing_docs)]
 
-use repeekooz::ZooKeeper;
+//! This is main entry point for this project
 
-#[tokio::main]
-async fn main() {
-    let client = ZooKeeper::new("127.0.0.1:2181", Duration::from_secs(5)).await;
-    println!("{:?}", client);
+use std::panic;
+
+use anyhow::Result;
+use app::start;
+use cli::parse_args;
+
+mod app;
+mod app_global;
+mod cli;
+mod config;
+mod draw;
+mod events;
+mod theme;
+mod utils;
+mod widget;
+
+fn main() -> Result<()> {
+    better_panic::install();
+    let config = parse_args()?;
+    // println!("{:?}", config);
+    setup_panic_hook();
+    start(&config)?;
+
+    Ok(())
+}
+
+fn setup_panic_hook() {
+    panic::set_hook(Box::new(|panic_info| {
+        // cleanup_terminal();
+        better_panic::Settings::auto().create_panic_handler()(panic_info);
+    }));
 }

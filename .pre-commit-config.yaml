@@ -18,7 +18,7 @@ repos:
         description: Format files with rustfmt.
         entry: bash -c 'cargo fmt -- --check'
         language: rust
-        # files: src/\\.rs
+        files: src/\\.rs
       - id: cargo-check
         name: cargo check
         description: Check the package for errors.
@@ -36,7 +36,7 @@ repos:
       - id: cargo-test
         name: cargo test
         description: unit test for the project
-        entry: bash -c 'cargo test --all-features --all'
+        entry: bash -c 'cargo test --all-features --all -- --nocapture '
         language: rust
       - id: cargo-doc
         name: cargo doc

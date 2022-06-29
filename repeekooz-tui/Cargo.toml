@@ -25,8 +25,12 @@ path = "src/main.rs"
 repeekooz = { path = ".." }
 
 # 三方
+anyhow = "1"
+
+thiserror = "1"
 log = "0.4"
 pretty_env_logger = "0.4"
+lazy_static = "1.4"
 
 tui = "0.18"
 
@@ -37,3 +41,4 @@ clap = {version = "3.1.8", features = ["derive"]}
 crossbeam-channel = "0.5"
 
 tokio = { version = "1.18", features = ["full"] }
+better-panic = "0.3.0"
