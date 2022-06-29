@@ -24,14 +24,14 @@ repos:
         description: Check the package for errors.
         entry: bash -c 'cargo check --all'
         language: rust
-        # files: \\.rs$
+        files: \\.rs$
         # pass_filenames: false
       - id: cargo-clippy
         name: cargo clippy
         description: Lint rust sources
         entry: bash -c 'cargo clippy --all-targets --all-features --tests --benches -- -D warnings'
         language: rust
-        # files: \\.rs$
+        files: \\.rs$
         # pass_filenames: false
       - id: cargo-test
         name: cargo test
